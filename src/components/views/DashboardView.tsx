@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../data/store';
-import { formatFCFA, formatDateFr } from '../../utils/formatters';
+import {
+  formatFCFA,
+  formatDateFr,
+  formatDateLongFr,
+  getCurrentWeekRange,
+  isDateToday,
+  isDateInThisWeek,
+  getWeekDays,
+} from '../../utils/formatters';
 import {
   TrendingUp,
   CreditCard,
@@ -29,6 +37,12 @@ import {
   Filter,
   UserCheck,
   Sparkles,
+  Calendar,
+  CalendarDays,
+  Sun,
+  Wallet,
+  Activity,
+  ArrowRight,
 } from 'lucide-react';
 import { PrintableDocType } from '../PrintableDocumentModal';
 
@@ -126,6 +140,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const gerantClients = clients.filter((c) => isGerantEntity(c.createdBy, c.createdByRole));
   const gerantInvoices = invoices.filter((i) => isGerantEntity(i.createdBy, i.createdByRole));
+
+  // 1. Recette Journalière (Aujourd'hui)
+  const todayPayments = payments.filter((p) => isDateToday(p.date, p.createdAt));
+  const todayRevenue = todayPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const todayOrders = allOrders.filter((o) => isDateToday(o.date, o.createdAt));
+  const todayOrdersAmount = todayOrders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
+  const todayExpensesList = expenses.filter((e) => isDateToday(e.date, e.createdAt));
+  const todayExpensesSum = todayExpensesList.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  const todayNetResult = todayRevenue - todayExpensesSum;
+
+  // Recette du jour spécifique du Gérant
+  const gerantTodayPayments = todayPayments.filter((p) => isGerantEntity(p.receivedBy, p.createdByRole));
+  const gerantTodayRevenue = gerantTodayPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+  // 2. Recette Gagnée en Semaine (Semaine en cours)
+  const currentWeekInfo = getCurrentWeekRange();
+  const weekPayments = payments.filter((p) => isDateInThisWeek(p.date, p.createdAt));
+  const weekRevenue = weekPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const weekOrders = allOrders.filter((o) => isDateInThisWeek(o.date, o.createdAt));
+  const weekOrdersAmount = weekOrders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
+  const weekExpensesList = expenses.filter((e) => isDateInThisWeek(e.date, e.createdAt));
+  const weekExpensesSum = weekExpensesList.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  const weekNetResult = weekRevenue - weekExpensesSum;
+
+  // Recette de la semaine spécifique du Gérant
+  const gerantWeekPayments = weekPayments.filter((p) => isGerantEntity(p.receivedBy, p.createdByRole));
+  const gerantWeekRevenue = gerantWeekPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+  // Répartition par jour des 7 jours de la semaine courante (Lundi à Dimanche)
+  const weekDays = getWeekDays();
+  const weekDailyStats = weekDays.map((day) => {
+    const dayPayments = payments.filter((p) => {
+      const pDate = p.date ? p.date.split('T')[0] : '';
+      const cDate = p.createdAt ? p.createdAt.split('T')[0] : '';
+      return pDate === day.dateISO || cDate === day.dateISO;
+    });
+    const amount = dayPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    return {
+      ...day,
+      amount,
+      count: dayPayments.length,
+    };
+  });
+  const maxDayAmount = Math.max(...weekDailyStats.map((d) => d.amount), 1);
 
   // Filtered orders according to selection
   const filteredOrders = allOrders.filter((ord) => {
@@ -273,6 +331,202 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
+      {/* 2.5. FOCUS RECETTES : JOURNALIÈRE & SEMAINE */}
+      <div className="bg-gradient-to-br from-slate-900 via-[#0d1e42] to-slate-900 rounded-2xl p-5 sm:p-6 text-white shadow-xl border border-blue-900/60">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-blue-800/60">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center font-black shadow-md shrink-0">
+              <Coins className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
+                  Point des Recettes : Aujourd'hui & Cette Semaine
+                </h2>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-400 text-slate-950 uppercase tracking-wider">
+                  En direct
+                </span>
+              </div>
+              <p className="text-xs text-blue-200/80 mt-0.5">
+                Suivi précis des encaissements réels pour la journée du {formatDateLongFr(new Date())} et la {currentWeekInfo.label.toLowerCase()}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => onNavigate('caisse')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-800/80 hover:bg-blue-700 text-blue-100 text-xs font-bold border border-blue-600/50 transition"
+            >
+              <Wallet className="w-3.5 h-3.5 text-amber-300" />
+              <span>Voir la Caisse</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate('facturation')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-xs"
+            >
+              <Receipt className="w-3.5 h-3.5" />
+              <span>Règlements & Reçus</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 2 Big Cards Grid: Journalière & Semaine */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-5">
+          {/* CARTE 1: RECETTE JOURNALIÈRE */}
+          <div className="bg-slate-950/70 rounded-2xl p-5 border border-emerald-500/30 hover:border-emerald-500/60 transition flex flex-col justify-between relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">
+                    Recette Journalière (Aujourd'hui)
+                  </span>
+                </div>
+                <span className="text-[11px] font-semibold text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-slate-700">
+                  {formatDateFr(new Date().toISOString())}
+                </span>
+              </div>
+
+              <div className="mt-3 flex items-baseline justify-between gap-2 flex-wrap">
+                <div>
+                  <div className="text-3xl sm:text-4xl font-black text-emerald-400 font-mono tracking-tight">
+                    {formatFCFA(todayRevenue)}
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>
+                      <strong>{todayPayments.length}</strong> encaissement{todayPayments.length > 1 ? 's' : ''} enregistré{todayPayments.length > 1 ? 's' : ''} aujourd'hui
+                    </span>
+                  </p>
+                </div>
+
+                {gerantTodayPayments.length > 0 && (
+                  <div className="px-3 py-1.5 rounded-xl bg-amber-400/10 border border-amber-400/30 text-right">
+                    <div className="text-[10px] uppercase font-bold text-amber-300">Encaissé par Gérant</div>
+                    <div className="text-xs font-black text-amber-200 font-mono">
+                      {formatFCFA(gerantTodayRevenue)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 pt-4 mt-4 border-t border-slate-800/90 text-xs">
+              <div className="bg-slate-900/60 rounded-xl p-2.5 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">Commandes du jour</span>
+                <span className="font-bold text-slate-200 block mt-0.5">
+                  {todayOrders.length} dossier{todayOrders.length > 1 ? 's' : ''}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {formatFCFA(todayOrdersAmount)}
+                </span>
+              </div>
+
+              <div className="bg-slate-900/60 rounded-xl p-2.5 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">Dépenses du jour</span>
+                <span className="font-bold text-rose-300 block mt-0.5">
+                  {formatFCFA(todayExpensesSum)}
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  {todayExpensesList.length} sortie{todayExpensesList.length > 1 ? 's' : ''}
+                </span>
+              </div>
+
+              <div className="bg-slate-900/60 rounded-xl p-2.5 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">Bénéfice net du jour</span>
+                <span className={`font-black block mt-0.5 ${todayNetResult >= 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
+                  {formatFCFA(todayNetResult)}
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  {todayNetResult >= 0 ? 'Solde positif' : 'Déficit journalier'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* CARTE 2: RECETTE GAGNÉE EN SEMAINE */}
+          <div className="bg-slate-950/70 rounded-2xl p-5 border border-blue-500/30 hover:border-blue-500/60 transition flex flex-col justify-between relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-blue-300">
+                    Recette Gagnée en Semaine
+                  </span>
+                </div>
+                <span className="text-[11px] font-semibold text-blue-200 bg-blue-900/60 px-2.5 py-0.5 rounded-lg border border-blue-700/50">
+                  {currentWeekInfo.label}
+                </span>
+              </div>
+
+              <div className="mt-3 flex items-baseline justify-between gap-2 flex-wrap">
+                <div>
+                  <div className="text-3xl sm:text-4xl font-black text-blue-300 font-mono tracking-tight">
+                    {formatFCFA(weekRevenue)}
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 flex items-center gap-1.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
+                    <span>
+                      <strong>{weekPayments.length}</strong> encaissement{weekPayments.length > 1 ? 's' : ''} cette semaine
+                    </span>
+                  </p>
+                </div>
+
+                {gerantWeekPayments.length > 0 && (
+                  <div className="px-3 py-1.5 rounded-xl bg-amber-400/10 border border-amber-400/30 text-right">
+                    <div className="text-[10px] uppercase font-bold text-amber-300">Gérant cette semaine</div>
+                    <div className="text-xs font-black text-amber-200 font-mono">
+                      {formatFCFA(gerantWeekRevenue)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Mini Bar Chart: 7 Jours de la semaine courante (Lun - Dim) */}
+            <div className="pt-3 mt-3 border-t border-slate-800/90">
+              <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2">
+                <span>Dynamique hebdomadaire (Lun - Dim)</span>
+                <span className="text-slate-300 font-mono">Net hebdo : <strong className={weekNetResult >= 0 ? 'text-emerald-400' : 'text-amber-400'}>{formatFCFA(weekNetResult)}</strong></span>
+              </div>
+              <div className="grid grid-cols-7 gap-1.5 items-end h-16 pt-1">
+                {weekDailyStats.map((dayStat, idx) => {
+                  const heightPercent = maxDayAmount > 0 ? Math.max(8, (dayStat.amount / maxDayAmount) * 100) : 8;
+                  return (
+                    <div key={idx} className="flex flex-col items-center h-full justify-end group relative">
+                      {/* Tooltip on hover */}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-8 bg-slate-800 text-white text-[9px] py-0.5 px-1.5 rounded shadow-sm pointer-events-none whitespace-nowrap z-20 font-mono">
+                        {dayStat.dayName} {dayStat.dayNumber} : {formatFCFA(dayStat.amount)}
+                      </div>
+                      <div className="w-full bg-slate-800 rounded-t overflow-hidden flex items-end h-full">
+                        <div
+                          style={{ height: `${heightPercent}%` }}
+                          className={`w-full rounded-t transition-all ${
+                            dayStat.isToday
+                              ? 'bg-gradient-to-t from-emerald-500 to-teal-400 shadow-xs'
+                              : dayStat.amount > 0
+                              ? 'bg-blue-500 group-hover:bg-blue-400'
+                              : 'bg-slate-700/50'
+                          }`}
+                        />
+                      </div>
+                      <span className={`text-[9px] mt-1 font-bold ${dayStat.isToday ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {dayStat.dayName}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 3. PRIMARY FINANCIAL & OPERATIONAL STATS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Recettes encaissées */}
@@ -413,61 +667,86 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* 4 Cards for Gérant's direct impact */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+        {/* 6 Cards for Gérant's direct impact including daily & weekly revenue */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-4">
+          <div className="bg-white rounded-xl p-3.5 border border-amber-300 shadow-xs ring-1 ring-amber-200/50">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase text-slate-500">Recette Jour Gérant</span>
+              <Sun className="w-4 h-4 text-amber-500" />
+            </div>
+            <div className="mt-2">
+              <span className="text-lg font-black text-amber-600 font-mono">{formatFCFA(gerantTodayRevenue)}</span>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              {gerantTodayPayments.length} règlement{gerantTodayPayments.length > 1 ? 's' : ''} aujourd'hui
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl p-3.5 border border-blue-200 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase text-slate-500">Recette Sem. Gérant</span>
+              <CalendarDays className="w-4 h-4 text-blue-600" />
+            </div>
+            <div className="mt-2">
+              <span className="text-lg font-black text-blue-700 font-mono">{formatFCFA(gerantWeekRevenue)}</span>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              {gerantWeekPayments.length} règlement{gerantWeekPayments.length > 1 ? 's' : ''} cette semaine
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl p-3.5 border border-emerald-200 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase text-slate-500">Total Encaissé</span>
+              <Coins className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div className="mt-2">
+              <span className="text-lg font-black text-emerald-700 font-mono">{formatFCFA(gerantPaymentsAmount)}</span>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              {gerantPayments.length} encaissement{gerantPayments.length > 1 ? 's' : ''} cumulés
+            </p>
+          </div>
+
           <div className="bg-white rounded-xl p-3.5 border border-amber-200 shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase text-slate-500">Commandes Gérant</span>
+              <span className="text-[10px] font-bold uppercase text-slate-500">Commandes Gérant</span>
               <ShoppingCart className="w-4 h-4 text-amber-600" />
             </div>
             <div className="mt-2">
-              <span className="text-xl font-black text-slate-900">{gerantOrders.length}</span>
-              <span className="text-[11px] text-slate-500 ml-1.5">saisies</span>
+              <span className="text-lg font-black text-slate-900">{gerantOrders.length}</span>
+              <span className="text-[10px] text-slate-500 ml-1">dossiers</span>
             </div>
-            <p className="text-xs font-bold text-amber-700 mt-1">
+            <p className="text-[10px] font-bold text-amber-800 mt-0.5 font-mono">
               {formatFCFA(gerantOrdersAmount)}
             </p>
           </div>
 
-          <div className="bg-white rounded-xl p-3.5 border border-amber-200 shadow-xs">
+          <div className="bg-white rounded-xl p-3.5 border border-indigo-200 shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase text-slate-500">Encaissements</span>
-              <Coins className="w-4 h-4 text-emerald-600" />
+              <span className="text-[10px] font-bold uppercase text-slate-500">Devis émis</span>
+              <FileText className="w-4 h-4 text-indigo-600" />
             </div>
             <div className="mt-2">
-              <span className="text-xl font-black text-slate-900">{gerantPayments.length}</span>
-              <span className="text-[11px] text-slate-500 ml-1.5">encaissés</span>
+              <span className="text-lg font-black text-slate-900">{gerantQuotes.length}</span>
+              <span className="text-[10px] text-slate-500 ml-1">émis</span>
             </div>
-            <p className="text-xs font-bold text-emerald-700 mt-1">
-              {formatFCFA(gerantPaymentsAmount)}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-xl p-3.5 border border-amber-200 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase text-slate-500">Devis émis</span>
-              <FileText className="w-4 h-4 text-blue-600" />
-            </div>
-            <div className="mt-2">
-              <span className="text-xl font-black text-slate-900">{gerantQuotes.length}</span>
-              <span className="text-[11px] text-slate-500 ml-1.5">propositions</span>
-            </div>
-            <p className="text-xs font-bold text-blue-700 mt-1">
+            <p className="text-[10px] font-bold text-indigo-700 mt-0.5 font-mono">
               {formatFCFA(gerantQuotesAmount)}
             </p>
           </div>
 
-          <div className="bg-white rounded-xl p-3.5 border border-amber-200 shadow-xs">
+          <div className="bg-white rounded-xl p-3.5 border border-purple-200 shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase text-slate-500">Clients créés</span>
+              <span className="text-[10px] font-bold uppercase text-slate-500">Clients créés</span>
               <Users className="w-4 h-4 text-purple-600" />
             </div>
             <div className="mt-2">
-              <span className="text-xl font-black text-slate-900">{gerantClients.length}</span>
-              <span className="text-[11px] text-slate-500 ml-1.5">nouveaux</span>
+              <span className="text-lg font-black text-slate-900">{gerantClients.length}</span>
+              <span className="text-[10px] text-slate-500 ml-1">créés</span>
             </div>
-            <p className="text-xs font-bold text-purple-700 mt-1">
-              Fiches enregistrées
+            <p className="text-[10px] text-purple-700 mt-0.5">
+              Clients enregistrés
             </p>
           </div>
         </div>
