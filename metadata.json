@@ -1,0 +1,6 @@
+{
+  "name": "SYGEMA CI - Imprimerie & Services Informatiques",
+  "description": "Application de gestion intégrale pour SYGEMA CI : imprimerie, maintenance informatique, graphisme, solutions numériques, tee-shirts, facturation, stocks et finances à Daloa.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
