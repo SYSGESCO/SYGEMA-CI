@@ -25,6 +25,8 @@ import {
   CompanyInfo,
   PaymentMethod,
   ServiceCategory,
+  SupplySale,
+  SupplySaleItem,
 } from '../types';
 
 import {
@@ -44,6 +46,7 @@ import {
   initialContingencies,
   initialSuppliers,
   initialProducts,
+  initialSupplySales,
   initialStockMovements,
   initialPurchaseOrders,
   initialCashMovements,
@@ -150,6 +153,21 @@ interface AppContextType {
   purchaseOrders: PurchaseOrder[];
   addPurchaseOrder: (po: Omit<PurchaseOrder, 'id' | 'purchaseNumber' | 'createdAt' | 'remainingAmount'>) => void;
   receivePurchaseOrder: (poId: string) => void;
+
+  // Vente de Fournitures Informatiques & Consommables
+  supplySales: SupplySale[];
+  addSupplySale: (sale: {
+    clientId?: string;
+    clientName: string;
+    clientPhone?: string;
+    items: SupplySaleItem[];
+    totalAmount: number;
+    paidAmount: number;
+    changeGiven: number;
+    paymentMethod: PaymentMethod;
+    notes?: string;
+  }) => SupplySale;
+  cancelSupplySale: (saleId: string) => void;
 
   // Caisse & Finances
   cashMovements: CashMovement[];
@@ -293,7 +311,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY}_products`);
-    return saved ? JSON.parse(saved) : initialProducts;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        // ignore
+      }
+    }
+    return initialProducts;
+  });
+
+  const [supplySales, setSupplySales] = useState<SupplySale[]>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_supplySales`);
+    return saved ? JSON.parse(saved) : initialSupplySales;
   });
 
   const [stockMovements, setStockMovements] = useState<StockMovement[]>(() => {
@@ -386,6 +417,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem(`${STORAGE_KEY}_cashRegisterCloses`, JSON.stringify(cashRegisterCloses));
       localStorage.setItem(`${STORAGE_KEY}_notifications`, JSON.stringify(notifications));
       localStorage.setItem(`${STORAGE_KEY}_auditLogs`, JSON.stringify(auditLogs));
+      localStorage.setItem(`${STORAGE_KEY}_supplySales`, JSON.stringify(supplySales));
     } catch (e) {
       console.warn('Erreur de sauvegarde locale', e);
     }
@@ -407,6 +439,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     contingencies,
     suppliers,
     products,
+    supplySales,
     stockMovements,
     purchaseOrders,
     cashMovements,
@@ -1115,6 +1148,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     });
 
+    // Vente de Fournitures Informatiques
+    supplySales.forEach((s) => {
+      const summaryItems = s.items.map((i) => `${i.productName} (x${i.quantity})`).join(', ');
+      list.push({
+        id: s.id,
+        orderNumber: s.saleNumber,
+        category: 'fournitures',
+        categoryLabel: 'Vente Fournitures Informatiques',
+        categoryIcon: 'ShoppingBag',
+        clientId: s.clientId,
+        clientName: s.clientName,
+        clientPhone: s.clientPhone,
+        title: summaryItems || 'Fournitures de bureau & informatique',
+        totalAmount: s.totalAmount,
+        paidAmount: s.paidAmount,
+        remainingAmount: 0,
+        status: s.status === 'Payé' ? 'Livré' : 'Annulé',
+        date: s.date.split('T')[0],
+        deliveryDate: s.date.split('T')[0],
+        createdBy: s.sellerName,
+        createdByRole: s.sellerRole,
+        createdAt: s.createdAt,
+      });
+    });
+
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   };
 
@@ -1518,6 +1576,117 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addAuditLog('MOUVEMENT_STOCK', 'STOCKS', `${mvtData.movementType} de ${mvtData.quantity} pour ${prod.name} (${mvtData.reason})`);
   };
 
+  // VENTE FOURNITURES INFORMATIQUES & BUREAUTIQUES
+  const addSupplySale = (saleData: {
+    clientId?: string;
+    clientName: string;
+    clientPhone?: string;
+    items: SupplySaleItem[];
+    totalAmount: number;
+    paidAmount: number;
+    changeGiven: number;
+    paymentMethod: PaymentMethod;
+    notes?: string;
+  }): SupplySale => {
+    const saleNum = `VNT-2026-${String(supplySales.length + 101).padStart(4, '0')}`;
+    const newSale: SupplySale = {
+      id: `sale_${Date.now()}`,
+      saleNumber: saleNum,
+      clientId: saleData.clientId || '',
+      clientName: saleData.clientName || 'Client de passage (Comptoir)',
+      clientPhone: saleData.clientPhone || '',
+      items: saleData.items,
+      totalAmount: saleData.totalAmount,
+      paidAmount: saleData.paidAmount,
+      changeGiven: saleData.changeGiven || 0,
+      paymentMethod: saleData.paymentMethod,
+      date: new Date().toISOString(),
+      sellerName: currentUser.name,
+      sellerRole: currentUser.role,
+      notes: saleData.notes || '',
+      status: 'Payé',
+      createdAt: new Date().toISOString(),
+    };
+
+    setSupplySales((prev) => [newSale, ...prev]);
+
+    // Automatically deduct stock for every sold supply
+    saleData.items.forEach((item) => {
+      const prod = products.find((p) => p.id === item.productId || p.name === item.productName);
+      if (prod) {
+        addStockMovement({
+          productId: prod.id,
+          productName: prod.name,
+          movementType: 'SORTIE',
+          quantity: item.quantity,
+          date: new Date().toISOString().split('T')[0],
+          reason: 'Vente client',
+          responsible: currentUser.name,
+          supplierOrOrder: saleNum,
+          observations: `Vente au comptoir ${saleNum} - ${newSale.clientName}`,
+        });
+      }
+    });
+
+    // Automatically record payment in caisse and revenue calculations
+    addPayment({
+      category: 'fournitures',
+      clientId: newSale.clientId,
+      clientName: newSale.clientName,
+      amount: newSale.paidAmount,
+      date: new Date().toISOString().split('T')[0],
+      paymentMethod: newSale.paymentMethod,
+      reference: saleNum,
+      notes: `Vente fournitures informatiques (${newSale.items.map((i) => `${i.productName} x${i.quantity}`).join(', ')})`,
+      receivedBy: currentUser.name,
+      createdByRole: currentUser.role,
+    });
+
+    addAuditLog(
+      'VENTE_FOURNITURES',
+      'FOURNITURES',
+      `Vente ${saleNum} de ${newSale.totalAmount.toLocaleString('fr-FR')} FCFA effectuée par ${currentUser.name} (${newSale.items.length} article(s))`
+    );
+
+    triggerNotification(
+      'payment',
+      'Nouvelle vente de fournitures',
+      `${saleNum} - ${newSale.clientName} : ${newSale.totalAmount.toLocaleString('fr-FR')} FCFA (${newSale.paymentMethod})`,
+      'fournitures'
+    );
+
+    return newSale;
+  };
+
+  const cancelSupplySale = (saleId: string) => {
+    setSupplySales((prev) =>
+      prev.map((s) => {
+        if (s.id === saleId) {
+          // Re-credit stock
+          s.items.forEach((item) => {
+            const prod = products.find((p) => p.id === item.productId || p.name === item.productName);
+            if (prod) {
+              addStockMovement({
+                productId: prod.id,
+                productName: prod.name,
+                movementType: 'ENTREE',
+                quantity: item.quantity,
+                date: new Date().toISOString().split('T')[0],
+                reason: 'Retour',
+                responsible: currentUser.name,
+                supplierOrOrder: s.saleNumber,
+                observations: `Annulation de la vente ${s.saleNumber}`,
+              });
+            }
+          });
+          return { ...s, status: 'Annulé' as const };
+        }
+        return s;
+      })
+    );
+    addAuditLog('ANNULATION_VENTE', 'FOURNITURES', `Vente ${saleId} annulée et stock réintégré`);
+  };
+
   // ACHATS FOURNISSEURS
   const addPurchaseOrder = (poData: Omit<PurchaseOrder, 'id' | 'purchaseNumber' | 'createdAt' | 'remainingAmount'>) => {
     const num = `ACH-2026-${String(purchaseOrders.length + 14).padStart(4, '0')}`;
@@ -1720,6 +1889,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setContingencies(initialContingencies);
     setSuppliers(initialSuppliers);
     setProducts(initialProducts);
+    setSupplySales(initialSupplySales);
     setStockMovements(initialStockMovements);
     setPurchaseOrders(initialPurchaseOrders);
     setCashMovements(initialCashMovements);
@@ -1832,6 +2002,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const branchRevenues: Record<string, number> = {
     'Imprimerie & Bureautique': printOrders.reduce((sum, p) => sum + (p.paidAmount || 0), 0),
+    'Vente Fournitures Informatiques': supplySales.reduce((sum, s) => sum + (s.paidAmount || 0), 0),
     'Maintenance Informatique': maintenance.reduce((sum, m) => sum + (m.paidAmount || 0), 0),
     'Graphisme & Communication': graphicProjects.reduce((sum, g) => sum + (g.paidAmount || 0), 0),
     'Solutions Numériques': digitalProjects.reduce((sum, d) => sum + (d.paidAmount || 0), 0),
@@ -1910,6 +2081,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addProduct,
         updateProduct,
         deleteProduct,
+        supplySales,
+        addSupplySale,
+        cancelSupplySale,
         stockMovements,
         addStockMovement,
         purchaseOrders,

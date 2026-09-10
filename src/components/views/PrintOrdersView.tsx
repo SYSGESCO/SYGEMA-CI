@@ -53,13 +53,14 @@ export const PrintOrdersView: React.FC<PrintOrdersViewProps> = ({ onOpenPrint })
   const [stockModalOrder, setStockModalOrder] = useState<PrintOrder | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [consumeQuantity, setConsumeQuantity] = useState<number>(1);
+  const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('TOUS');
 
   // Form State
   const [formData, setFormData] = useState({
     clientId: '',
     clientName: '',
     phone: '',
-    serviceType: 'Impression couleur' as PrintServiceType,
+    serviceType: 'Impression noir et blanc' as PrintServiceType,
     documentName: '',
     paperFormat: 'A4' as PaperFormat,
     pageCount: 1,
@@ -77,14 +78,17 @@ export const PrintOrdersView: React.FC<PrintOrdersViewProps> = ({ onOpenPrint })
   });
 
   const servicesList: PrintServiceType[] = [
+    'Inscription en ligne (Concours, Examens, Bourses, Universités)',
+    'Rédaction & Saisie d\'exposé (Scolaire & Universitaire)',
+    'Confection de carnets (Reçus, Factures, Bons à souche)',
+    'Reliure de documents & rapports (Spirale, Thermique, Baguette)',
     'Impression noir et blanc',
     'Impression couleur',
     'Photocopie N&B et couleur',
     'Scan et numérisation de documents',
-    'Saisie de documents',
+    'Saisie de documents & Traitement de texte',
     'Mise en page et traitement de texte',
-    'Reliure de documents',
-    'Plastification de documents',
+    'Plastification de documents (Badges, A4, A3)',
     'Conception et impression de documents professionnels',
   ];
 
@@ -175,7 +179,11 @@ export const PrintOrdersView: React.FC<PrintOrdersViewProps> = ({ onOpenPrint })
       p.serviceType.toLowerCase().includes(search.toLowerCase());
 
     const matchesStatus = filterStatus === 'TOUS' || p.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    const matchesService =
+      selectedServiceFilter === 'TOUS' ||
+      p.serviceType.toLowerCase().includes(selectedServiceFilter.toLowerCase());
+
+    return matchesSearch && matchesStatus && matchesService;
   });
 
   return (
@@ -190,7 +198,7 @@ export const PrintOrdersView: React.FC<PrintOrdersViewProps> = ({ onOpenPrint })
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Impressions N&B et couleur, photocopies, scans, saisie, reliures, plastifications et documents officiels
+            Inscriptions en ligne, exposés scolaires & universitaires, carnets, reliures, tirages et plastifications
           </p>
         </div>
 
@@ -205,53 +213,115 @@ export const PrintOrdersView: React.FC<PrintOrdersViewProps> = ({ onOpenPrint })
         </button>
       </div>
 
-      {/* Services Badges Grid (Strictly according to user prompt) */}
+      {/* Services Badges Grid (Interactive & Filterable) */}
       <div className="bg-blue-950 text-white rounded-2xl p-5 shadow-xs border border-blue-900">
-        <h2 className="text-[11px] uppercase tracking-wider font-extrabold text-blue-200 mb-3 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-amber-400" />
-          <span>Services de Tirage & Bureautique SYGEMA CI</span>
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 text-xs">
-          {servicesList.map((srv) => (
-            <div
-              key={srv}
-              className="p-2.5 rounded-xl bg-blue-900/50 border border-blue-800/80 text-blue-100 flex items-center gap-2"
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+          <h2 className="text-[11px] uppercase tracking-wider font-extrabold text-blue-200 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>Catalogue des Services de Tirage & Bureautique SYGEMA CI</span>
+          </h2>
+          {selectedServiceFilter !== 'TOUS' && (
+            <button
+              type="button"
+              onClick={() => setSelectedServiceFilter('TOUS')}
+              className="text-[11px] font-bold text-amber-400 hover:text-amber-300 underline underline-offset-2 self-start sm:self-auto"
             >
-              <CheckCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="font-medium text-[11px] leading-snug">{srv}</span>
-            </div>
-          ))}
+              Afficher tous les services ({printOrders.length})
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 text-xs">
+          {servicesList.map((srv) => {
+            const isSelected = selectedServiceFilter !== 'TOUS' && srv.toLowerCase().includes(selectedServiceFilter.toLowerCase());
+            return (
+              <button
+                key={srv}
+                type="button"
+                onClick={() => {
+                  if (isSelected) {
+                    setSelectedServiceFilter('TOUS');
+                  } else {
+                    // Filter by key term
+                    if (srv.includes('Inscription')) setSelectedServiceFilter('Inscription');
+                    else if (srv.includes('exposé')) setSelectedServiceFilter('exposé');
+                    else if (srv.includes('carnet')) setSelectedServiceFilter('carnet');
+                    else if (srv.includes('Reliure')) setSelectedServiceFilter('Reliure');
+                    else setSelectedServiceFilter(srv);
+                  }
+                }}
+                className={`p-2.5 rounded-xl text-left border transition flex items-center gap-2 ${
+                  isSelected
+                    ? 'bg-amber-400 text-slate-950 border-amber-300 font-bold shadow-sm'
+                    : 'bg-blue-900/50 hover:bg-blue-800/80 border-blue-800/80 text-blue-100'
+                }`}
+              >
+                <CheckCircle className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-slate-950' : 'text-amber-400'}`} />
+                <span className="text-[11px] leading-snug">{srv}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Search & Status Filters */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 bg-white rounded-xl p-4 shadow-xs border border-slate-200">
-        <div className="relative flex-1 w-full">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher par N° commande, client, document, prestation..."
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-          />
-        </div>
-
-        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
-          {['TOUS', 'En attente', 'En cours', 'Terminé', 'Livré'].map((st) => (
+      {/* Quick Service Chips & Search Filters */}
+      <div className="space-y-3 bg-white rounded-xl p-4 shadow-xs border border-slate-200">
+        {/* Rapid service filters */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">
+            Filtre Service :
+          </span>
+          {[
+            { label: 'Tous', filter: 'TOUS' },
+            { label: '📝 Inscriptions en ligne', filter: 'Inscription' },
+            { label: '📚 Exposés', filter: 'exposé' },
+            { label: '🧾 Carnets', filter: 'carnet' },
+            { label: '📑 Reliures', filter: 'Reliure' },
+            { label: '🖨️ Impressions', filter: 'Impression' },
+            { label: '📄 Photocopies & Scans', filter: 'Photocopie' },
+          ].map((item) => (
             <button
-              key={st}
+              key={item.filter}
               type="button"
-              onClick={() => setFilterStatus(st)}
+              onClick={() => setSelectedServiceFilter(item.filter)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
-                filterStatus === st
-                  ? 'bg-blue-900 text-white shadow-xs'
+                selectedServiceFilter === item.filter
+                  ? 'bg-blue-600 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              {st}
+              {item.label}
             </button>
           ))}
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t border-slate-100">
+          <div className="relative flex-1 w-full">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher par N° commande, client, document, prestation..."
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
+            {['TOUS', 'En attente', 'En cours', 'Terminé', 'Livré'].map((st) => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setFilterStatus(st)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+                  filterStatus === st
+                    ? 'bg-blue-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

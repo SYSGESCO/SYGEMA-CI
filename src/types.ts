@@ -194,13 +194,50 @@ export interface TshirtOrder {
 }
 
 // Global Order view
-export type ServiceCategory = 'imprimerie' | 'maintenance' | 'graphisme' | 'solutions_numeriques' | 'teeshirt';
+export type ServiceCategory =
+  | 'imprimerie'
+  | 'maintenance'
+  | 'graphisme'
+  | 'solutions_numeriques'
+  | 'teeshirt'
+  | 'fournitures';
+
 export type BranchType =
   | 'Imprimerie & Bureautique'
+  | 'Vente Fournitures Informatiques'
   | 'Maintenance Informatique'
   | 'Graphisme & Communication'
   | 'Solutions Numériques'
   | 'Impression Tee-shirt';
+
+// Vente de Fournitures & Consommables Informatiques
+export interface SupplySaleItem {
+  productId: string;
+  productName: string;
+  category?: string;
+  unitPrice: number;
+  quantity: number;
+  total: number;
+}
+
+export interface SupplySale {
+  id: string;
+  saleNumber: string; // VNT-2026-XXXX
+  clientId: string;
+  clientName: string;
+  clientPhone: string;
+  items: SupplySaleItem[];
+  totalAmount: number;
+  paidAmount: number;
+  changeGiven: number;
+  paymentMethod: PaymentMethod;
+  date: string;
+  sellerName: string;
+  sellerRole: string;
+  notes?: string;
+  status: 'Payé' | 'Annulé';
+  createdAt: string;
+}
 
 export interface UnifiedOrder {
   id: string;
