@@ -63,18 +63,18 @@ export const FacturationView: React.FC<FacturationViewProps> = ({
     branch: 'Imprimerie & Bureautique' as BranchType,
     items: [
       {
-        description: 'Tirage et impression rapports d\'activité',
-        quantity: 10,
-        unitPrice: 500,
-        total: 5000,
+        description: '',
+        quantity: 1,
+        unitPrice: 0,
+        total: 0,
       },
     ],
-    totalAmount: 5000,
-    paidAmount: 5000,
+    totalAmount: 0,
+    paidAmount: 0,
     paymentMethod: 'Espèces' as PaymentMethod,
     issueDate: new Date().toISOString().split('T')[0],
     dueDate: new Date().toISOString().split('T')[0],
-    notes: 'Règlement à la livraison.',
+    notes: '',
   });
 
   // Modal: Create Quote
@@ -86,16 +86,16 @@ export const FacturationView: React.FC<FacturationViewProps> = ({
     branch: 'Maintenance Informatique' as BranchType,
     items: [
       {
-        description: 'Maintenance préventive parc 5 ordinateurs',
-        quantity: 5,
-        unitPrice: 15000,
-        total: 75000,
+        description: '',
+        quantity: 1,
+        unitPrice: 0,
+        total: 0,
       },
     ],
-    totalAmount: 75000,
+    totalAmount: 0,
     issueDate: new Date().toISOString().split('T')[0],
     validUntil: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-    notes: 'Devis valable 30 jours calendaires.',
+    notes: '',
   });
 
   // Modal: Record Payment

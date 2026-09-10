@@ -60,20 +60,20 @@ export const PrintOrdersView: React.FC<PrintOrdersViewProps> = ({ onOpenPrint })
     clientName: '',
     phone: '',
     serviceType: 'Impression couleur' as PrintServiceType,
-    documentName: 'Rapport d\'activité officiel',
+    documentName: '',
     paperFormat: 'A4' as PaperFormat,
-    pageCount: 10,
-    copyCount: 5,
-    colorType: 'Couleur' as ColorType,
-    printingSide: 'Recto-verso' as PrintingSide,
-    unitPrice: 150,
-    totalAmount: 7500,
-    paidAmount: 7500,
+    pageCount: 1,
+    copyCount: 1,
+    colorType: 'Noir & Blanc' as ColorType,
+    printingSide: 'Recto' as PrintingSide,
+    unitPrice: 0,
+    totalAmount: 0,
+    paidAmount: 0,
     paymentMethod: 'Espèces' as PaymentMethod,
     orderDate: new Date().toISOString().split('T')[0],
     deliveryDate: new Date().toISOString().split('T')[0],
     status: 'En attente' as OrderStatus,
-    observations: 'Reliure spirale incluse.',
+    observations: '',
   });
 
   const servicesList: PrintServiceType[] = [
@@ -90,31 +90,27 @@ export const PrintOrdersView: React.FC<PrintOrdersViewProps> = ({ onOpenPrint })
 
   // Auto-calculate total in form
   const handleCalculateTotal = (pages: number, copies: number, unit: number) => {
-    return (pages || 1) * (copies || 1) * (unit || 0);
+    return (pages || 0) * (copies || 0) * (unit || 0);
   };
 
   const handleOpenAdd = () => {
     setEditingOrder(null);
     const defaultClient = clients[0];
-    const initialPages = 10;
-    const initialCopies = 2;
-    const initialUnit = 100;
-    const initialTotal = handleCalculateTotal(initialPages, initialCopies, initialUnit);
 
     setFormData({
       clientId: defaultClient ? defaultClient.id : '',
       clientName: defaultClient ? defaultClient.name : '',
       phone: defaultClient ? defaultClient.phone : '',
       serviceType: 'Impression noir et blanc',
-      documentName: 'Thèse / Rapport',
+      documentName: '',
       paperFormat: 'A4',
-      pageCount: initialPages,
-      copyCount: initialCopies,
+      pageCount: 1,
+      copyCount: 1,
       colorType: 'Noir & Blanc',
-      printingSide: 'Recto-verso',
-      unitPrice: initialUnit,
-      totalAmount: initialTotal,
-      paidAmount: initialTotal,
+      printingSide: 'Recto',
+      unitPrice: 0,
+      totalAmount: 0,
+      paidAmount: 0,
       paymentMethod: 'Espèces',
       orderDate: new Date().toISOString().split('T')[0],
       deliveryDate: new Date().toISOString().split('T')[0],

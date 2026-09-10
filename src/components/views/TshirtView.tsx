@@ -53,18 +53,18 @@ export const TshirtView: React.FC<TshirtViewProps> = ({ onOpenPrint }) => {
     clientId: '',
     clientName: '',
     phone: '',
-    designName: 'Logo Entreprise Cœur & Dos',
+    designName: '',
     tshirtColor: 'Blanc',
-    size: 'M, L, XL',
-    quantity: 25,
+    size: 'M',
+    quantity: 1,
     printType: 'DTF' as TshirtPrintType,
-    unitPrice: 3500,
-    totalAmount: 87500,
-    advance: 50000,
+    unitPrice: 0,
+    totalAmount: 0,
+    advance: 0,
     orderDate: new Date().toISOString().split('T')[0],
     expectedDate: new Date().toISOString().split('T')[0],
     status: 'Nouvelle commande' as TshirtStatus,
-    observations: 'Col rond, 100% coton.',
+    observations: '',
   });
 
   const printTypes: TshirtPrintType[] = [
@@ -77,32 +77,29 @@ export const TshirtView: React.FC<TshirtViewProps> = ({ onOpenPrint }) => {
   ];
 
   const handleCalculateTotal = (qty: number, unit: number) => {
-    return (qty || 1) * (unit || 0);
+    return (qty || 0) * (unit || 0);
   };
 
   const handleOpenAdd = () => {
     setEditingOrder(null);
     const defaultClient = clients[0];
-    const initialQty = 25;
-    const initialUnit = 3500;
-    const initialTotal = handleCalculateTotal(initialQty, initialUnit);
 
     setFormData({
       clientId: defaultClient ? defaultClient.id : '',
       clientName: defaultClient ? defaultClient.name : '',
       phone: defaultClient ? defaultClient.phone : '',
-      designName: 'Logo poitrine + Inscription dos',
-      tshirtColor: 'Noir',
-      size: 'S: 5, M: 10, L: 10',
-      quantity: initialQty,
+      designName: '',
+      tshirtColor: 'Blanc',
+      size: 'M',
+      quantity: 1,
       printType: 'DTF',
-      unitPrice: initialUnit,
-      totalAmount: initialTotal,
-      advance: 45000,
+      unitPrice: 0,
+      totalAmount: 0,
+      advance: 0,
       orderDate: new Date().toISOString().split('T')[0],
       expectedDate: new Date().toISOString().split('T')[0],
       status: 'Nouvelle commande',
-      observations: 'Coton de qualité supérieure.',
+      observations: '',
     });
     setIsModalOpen(true);
   };

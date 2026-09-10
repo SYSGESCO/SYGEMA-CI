@@ -41,7 +41,7 @@ export const DepensesView: React.FC<DepensesViewProps> = ({ initialTab = 'depens
   const [formData, setFormData] = useState({
     title: '',
     category: 'Consommables & Fournitures' as ExpenseCategory,
-    amount: 15000,
+    amount: 0,
     date: new Date().toISOString().split('T')[0],
     paidBy: currentUser.name,
     paymentMethod: 'Espèces' as PaymentMethod,
@@ -65,7 +65,7 @@ export const DepensesView: React.FC<DepensesViewProps> = ({ initialTab = 'depens
     setFormData({
       title: '',
       category: 'Consommables & Fournitures',
-      amount: 10000,
+      amount: 0,
       date: new Date().toISOString().split('T')[0],
       paidBy: currentUser.name,
       paymentMethod: 'Espèces',

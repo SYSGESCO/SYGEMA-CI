@@ -38,13 +38,13 @@ export const StockView: React.FC = () => {
   const [productForm, setProductForm] = useState({
     name: '',
     category: 'Papeterie' as StockCategory,
-    unit: 'Rame',
-    currentStock: 10,
-    minStockAlert: 5,
-    purchasePrice: 2800,
-    sellingPrice: 4000,
-    supplier: 'Papeterie Moderne Daloa',
-    location: 'Étagère A1',
+    unit: 'Unité',
+    currentStock: 0,
+    minStockAlert: 0,
+    purchasePrice: 0,
+    sellingPrice: 0,
+    supplier: '',
+    location: '',
   });
 
   // Modal: Stock In / Stock Out
@@ -52,8 +52,8 @@ export const StockView: React.FC = () => {
   const [movementForm, setMovementForm] = useState({
     productId: '',
     type: 'Entrée' as 'Entrée' | 'Sortie' | 'Ajustement',
-    quantity: 5,
-    reason: 'Réapprovisionnement fournisseur',
+    quantity: 0,
+    reason: '',
   });
 
   const categories: StockCategory[] = [
@@ -71,12 +71,12 @@ export const StockView: React.FC = () => {
       name: '',
       category: 'Papeterie',
       unit: 'Unité',
-      currentStock: 10,
-      minStockAlert: 3,
-      purchasePrice: 2000,
-      sellingPrice: 3500,
-      supplier: suppliers[0]?.name || 'Fournisseur Daloa',
-      location: 'Atelier',
+      currentStock: 0,
+      minStockAlert: 0,
+      purchasePrice: 0,
+      sellingPrice: 0,
+      supplier: suppliers[0]?.name || '',
+      location: '',
     });
     setIsProductModalOpen(true);
   };

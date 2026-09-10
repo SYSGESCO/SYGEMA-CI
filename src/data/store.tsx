@@ -171,7 +171,7 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
-const STORAGE_KEY = 'sygema_ci_erp_v3_clean_zero';
+const STORAGE_KEY = 'sygema_ci_erp_v4_strict_zero';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [loaded, setLoaded] = useState(false);
@@ -290,13 +290,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Save to localStorage
   useEffect(() => {
-    // Nettoyage automatique des anciennes données de démo v1 pour garantir la remise à zéro
-    if (
-      localStorage.getItem('sygema_ci_erp_v1_company') ||
-      localStorage.getItem('sygema_ci_erp_v1_clients') ||
-      localStorage.getItem('sygema_ci_erp_v1_maintenance')
-    ) {
+    // Nettoyage automatique des anciennes données pour garantir la stricte remise à zéro
+    if (!localStorage.getItem('sygema_ci_erp_v4_strict_zero_init')) {
       localStorage.clear();
+      localStorage.setItem('sygema_ci_erp_v4_strict_zero_init', 'true');
       resetAllData();
     }
     setLoaded(true);
@@ -1526,7 +1523,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       else if (m.type === 'SORTIE') outflows += m.amount;
     });
 
-    const initial = cashRegisterCloses[0]?.actualBalance || 50000;
+    const initial = cashRegisterCloses[0]?.actualBalance || 0;
     const theoretical = initial + inflows - outflows;
 
     return { theoretical, inflows, outflows };
@@ -1541,7 +1538,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: new Date().toISOString().split('T')[0],
       closedAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
       responsible: currentUser.name,
-      initialBalance: cashRegisterCloses[0]?.actualBalance || 50000,
+      initialBalance: cashRegisterCloses[0]?.actualBalance || 0,
       totalInflows: inflows,
       totalOutflows: outflows,
       theoreticalBalance: theoretical,

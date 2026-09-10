@@ -53,13 +53,13 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({ onOpenPrint })
     problemType: 'Diagnostic complet' as MaintenanceProblemType,
     diagnostic: '',
     interventionDone: '',
-    hardwareConcerned: 'Ordinateur portable HP',
+    hardwareConcerned: '',
     technician: 'Patrick N’Guessan',
-    cost: 15000,
-    paidAmount: 5000,
+    cost: 0,
+    paidAmount: 0,
     status: 'Reçu' as MaintenanceStatus,
     deliveryDate: '',
-    observations: 'Câble d\'alimentation fourni avec la machine.',
+    observations: '',
   });
 
   const handleOpenAdd = () => {
@@ -71,15 +71,15 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({ onOpenPrint })
       phone: defaultClient ? defaultClient.phone : '',
       depositDate: new Date().toISOString().split('T')[0],
       problemType: 'Diagnostic complet',
-      diagnostic: 'Diagnostic en cours en atelier',
-      interventionDone: 'En attente des pièces ou de l\'accord client',
-      hardwareConcerned: 'Ordinateur portable HP Pavilion',
+      diagnostic: '',
+      interventionDone: '',
+      hardwareConcerned: '',
       technician: 'Patrick N’Guessan',
-      cost: 15000,
-      paidAmount: 5000,
+      cost: 0,
+      paidAmount: 0,
       status: 'Reçu',
       deliveryDate: '',
-      observations: 'Chargeur fourni.',
+      observations: '',
     });
     setIsModalOpen(true);
   };
