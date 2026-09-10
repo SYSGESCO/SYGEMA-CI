@@ -71,6 +71,20 @@ export const UsersView: React.FC = () => {
     setIsModalOpen(false);
   };
 
+  if (currentUser.role === 'Gérant') {
+    return (
+      <div className="bg-white rounded-3xl p-8 border border-amber-200 text-center max-w-md mx-auto my-12 shadow-sm">
+        <div className="w-12 h-12 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mx-auto mb-3">
+          <Lock className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-black text-slate-900">Accès Réservé à l'Administrateur</h2>
+        <p className="text-xs text-slate-600 mt-2">
+          Le profil Gérant ne dispose pas des droits pour ajouter, modifier ou supprimer des comptes utilisateurs.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}

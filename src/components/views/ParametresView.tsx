@@ -10,10 +10,11 @@ import {
   Printer,
   Shield,
   Palette,
+  Lock,
 } from 'lucide-react';
 
 export const ParametresView: React.FC = () => {
-  const { companyInfo, updateCompanyInfo, resetAllData } = useAppStore();
+  const { companyInfo, updateCompanyInfo, resetAllData, currentUser } = useAppStore();
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
 
@@ -35,6 +36,20 @@ export const ParametresView: React.FC = () => {
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
+
+  if (currentUser?.role === 'Gérant') {
+    return (
+      <div className="bg-white rounded-3xl p-8 border border-amber-200 text-center max-w-md mx-auto my-12 shadow-sm">
+        <div className="w-12 h-12 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mx-auto mb-3">
+          <Lock className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-black text-slate-900">Accès Réservé à l'Administrateur</h2>
+        <p className="text-xs text-slate-600 mt-2">
+          Le profil Gérant ne dispose pas des droits pour modifier les coordonnées officielles de l'entreprise ou réinitialiser les données système.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

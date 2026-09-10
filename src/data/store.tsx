@@ -59,6 +59,9 @@ interface AppContextType {
   updateCompanyInfo?: (info: Partial<CompanyInfo>) => void;
   currentUser: User;
   setCurrentUser: (user: User) => void;
+  isAuthenticated: boolean;
+  login: (username: string, password: string) => { success: boolean; message?: string };
+  logout: () => void;
   users: User[];
   addUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
   updateUser?: (id: string, updates: Partial<User>) => void;
@@ -183,10 +186,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [users, setUsers] = useState<User[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY}_users`);
-    return saved ? JSON.parse(saved) : initialUsers;
+    if (saved) {
+      try {
+        const parsed: User[] = JSON.parse(saved);
+        const hasAdmin = parsed.some((u) => u.username === 'admin');
+        const hasGerant = parsed.some((u) => u.username === 'gerant');
+        if (!hasAdmin || !hasGerant) {
+          return initialUsers;
+        }
+        return parsed;
+      } catch (e) {
+        return initialUsers;
+      }
+    }
+    return initialUsers;
   });
 
-  const [currentUser, setCurrentUser] = useState<User>(() => users[0] || initialUsers[0]);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    const session = localStorage.getItem(`${STORAGE_KEY}_auth_session`);
+    return !!session;
+  });
+
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    const session = localStorage.getItem(`${STORAGE_KEY}_auth_session`);
+    if (session) {
+      const found = initialUsers.find((u) => u.username === session) || users.find((u) => u.username === session);
+      if (found) return found;
+    }
+    return initialUsers[0];
+  });
 
   const [clients, setClients] = useState<Client[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY}_clients`);
@@ -1633,6 +1661,82 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addAuditLog('SUPPRESSION_UTILISATEUR', 'UTILISATEURS', `Suppression utilisateur ID: ${id}`);
   };
 
+  const login = (username: string, password: string): { success: boolean; message?: string } => {
+    const cleanUser = (username || '').trim().toLowerCase();
+    const cleanPass = (password || '').trim();
+
+    // Authentification Gérant : login gerant, mot de passe 1234
+    if (cleanUser === 'gerant' && cleanPass === '1234') {
+      let gUser = users.find((u) => u.username === 'gerant');
+      if (!gUser) {
+        gUser = initialUsers.find((u) => u.username === 'gerant') || {
+          id: 'usr_gerant',
+          name: 'Gérant Vente des Services',
+          username: 'gerant',
+          password: '1234',
+          role: 'Gérant',
+          active: true,
+          createdAt: new Date().toISOString(),
+        };
+      }
+      setCurrentUser(gUser);
+      setIsAuthenticated(true);
+      localStorage.setItem(`${STORAGE_KEY}_auth_session`, 'gerant');
+      addAuditLog('CONNEXION', 'AUTHENTIFICATION', `Connexion réussie du Gérant : ${gUser.name}`);
+      return { success: true };
+    }
+
+    // Authentification Administrateur : login admin, mot de passe Voyage2026@
+    if (cleanUser === 'admin' && cleanPass === 'Voyage2026@') {
+      let aUser = users.find((u) => u.username === 'admin');
+      if (!aUser) {
+        aUser = initialUsers.find((u) => u.username === 'admin') || {
+          id: 'usr_admin',
+          name: 'Administrateur SYGEMA CI',
+          username: 'admin',
+          password: 'Voyage2026@',
+          role: 'ADMIN',
+          active: true,
+          createdAt: new Date().toISOString(),
+        };
+      }
+      setCurrentUser(aUser);
+      setIsAuthenticated(true);
+      localStorage.setItem(`${STORAGE_KEY}_auth_session`, 'admin');
+      addAuditLog('CONNEXION', 'AUTHENTIFICATION', `Connexion réussie de l'Administrateur : ${aUser.name}`);
+      return { success: true };
+    }
+
+    // Vérification éventuelle d'autres comptes utilisateurs créés
+    const found = users.find(
+      (u) =>
+        (u.username?.toLowerCase() === cleanUser || u.email?.toLowerCase() === cleanUser) &&
+        (u.password === cleanPass || (!u.password && cleanPass === '1234'))
+    );
+
+    if (found) {
+      if (!found.active) {
+        return { success: false, message: 'Ce compte utilisateur est actuellement désactivé.' };
+      }
+      setCurrentUser(found);
+      setIsAuthenticated(true);
+      localStorage.setItem(`${STORAGE_KEY}_auth_session`, found.username || found.id);
+      addAuditLog('CONNEXION', 'AUTHENTIFICATION', `Connexion de ${found.name} (${found.role})`);
+      return { success: true };
+    }
+
+    return {
+      success: false,
+      message: "Identifiant ou mot de passe incorrect. Veuillez vérifier vos informations de connexion.",
+    };
+  };
+
+  const logout = () => {
+    localStorage.removeItem(`${STORAGE_KEY}_auth_session`);
+    setIsAuthenticated(false);
+    addAuditLog('DECONNEXION', 'AUTHENTIFICATION', `Déconnexion de l'utilisateur ${currentUser.name}`);
+  };
+
   const totalIncome = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   const netProfit = totalIncome - totalExpenses;
@@ -1655,6 +1759,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateCompanyInfo: updateCompany,
         currentUser,
         setCurrentUser,
+        isAuthenticated,
+        login,
+        logout,
         users,
         addUser,
         updateUser,

@@ -11,6 +11,8 @@ import {
   Shield,
   CheckCircle,
   AlertTriangle,
+  LogOut,
+  ShoppingBag,
 } from 'lucide-react';
 import { UserRole } from '../types';
 
@@ -36,11 +38,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     notifications,
     markNotificationRead,
     clearNotifications,
+    logout,
   } = useAppStore();
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+  const isGerant = currentUser?.role === 'Gérant';
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const roleColors: Record<UserRole, string> = {
@@ -252,6 +256,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             </button>
 
+            {/* Direct Logout Button */}
+            <button
+              id="btn-navbar-logout"
+              type="button"
+              onClick={logout}
+              title="Déconnexion"
+              className="flex items-center gap-1.5 p-1.5 sm:px-2.5 rounded-lg text-slate-300 hover:text-rose-400 hover:bg-slate-800 transition text-xs font-semibold"
+            >
+              <LogOut className="w-4 h-4 text-rose-400" />
+              <span className="hidden md:inline">Quitter</span>
+            </button>
+
             {showUserMenu && (
               <div className="absolute right-0 mt-2 w-72 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl p-3 z-50">
                 <div className="pb-2 border-b border-slate-800">
@@ -268,10 +284,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 </div>
 
-                {/* Quick Role Switcher for Testing */}
+                {/* Quick Role Switcher */}
                 <div className="mt-3">
                   <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 mb-2">
-                    Changer d'utilisateur (Test des Rôles)
+                    Changer de compte
                   </p>
                   <div className="space-y-1">
                     {users.map((u) => (
@@ -295,27 +311,49 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 </div>
 
-                <div className="mt-3 pt-2 border-t border-slate-800 flex justify-between items-center text-xs">
+                <div className="mt-3 pt-2 border-t border-slate-800 flex flex-col gap-1.5 text-xs">
+                  {!isGerant && (
+                    <div className="flex justify-between items-center pb-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onNavigate('utilisateurs');
+                          setShowUserMenu(false);
+                        }}
+                        className="text-amber-400 hover:underline flex items-center gap-1"
+                      >
+                        <Shield className="w-3.5 h-3.5" />
+                        <span>Gérer les accès</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onNavigate('parametres');
+                          setShowUserMenu(false);
+                        }}
+                        className="text-slate-400 hover:text-white"
+                      >
+                        Paramètres
+                      </button>
+                    </div>
+                  )}
+
+                  {isGerant && (
+                    <p className="text-[11px] text-amber-400/90 italic pb-1">
+                      Mode Gérant : ventes, commandes, devis & facturation.
+                    </p>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => {
-                      onNavigate('utilisateurs');
+                      logout();
                       setShowUserMenu(false);
                     }}
-                    className="text-amber-400 hover:underline flex items-center gap-1"
+                    className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-rose-950/40 border border-rose-800/60 text-rose-300 hover:bg-rose-900/50 hover:text-white transition font-bold"
                   >
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>Gérer les accès</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onNavigate('parametres');
-                      setShowUserMenu(false);
-                    }}
-                    className="text-slate-400 hover:text-white"
-                  >
-                    Paramètres
+                    <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Se déconnecter</span>
                   </button>
                 </div>
               </div>

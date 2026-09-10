@@ -24,6 +24,9 @@ import {
   Settings,
   X,
   AlertTriangle,
+  LogOut,
+  Shield,
+  ShoppingBag,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -41,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen,
   onCloseMobile,
 }) => {
-  const { products, charges, maintenance } = useAppStore();
+  const { products, charges, maintenance, currentUser, logout } = useAppStore();
   const isMobile = isOpenMobile ?? isMobileOpen ?? false;
 
   const lowStockCount = products.filter(
@@ -56,8 +59,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     (m) => m.status === 'Reçu' || m.status === 'En diagnostic' || m.status === 'En cours'
   ).length;
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, category: 'Général' },
+  const isGerant = currentUser?.role === 'Gérant';
+
+  const rawMenuItems = [
+    { id: 'dashboard', label: isGerant ? 'Tableau de bord Ventes' : 'Tableau de bord', icon: LayoutDashboard, category: 'Général' },
     { id: 'clients', label: 'Clients', icon: Users, category: 'Général' },
 
     // The 5 Core Services of SYGEMA CI
@@ -73,10 +78,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'facturation', label: 'Facturation & Paiements', icon: CreditCard, category: 'Commercial' },
 
     // Finances & Dépenses
+    { id: 'caisse', label: 'Caisse & Ventes', icon: Coins, category: 'Finances' },
     { id: 'depenses', label: 'Dépenses', icon: Receipt, category: 'Finances' },
     { id: 'charges', label: 'Charges', icon: Tag, category: 'Finances', badge: pendingChargesCount > 0 ? pendingChargesCount : undefined },
     { id: 'imprevus', label: 'Imprévus', icon: AlertOctagon, category: 'Finances' },
-    { id: 'caisse', label: 'Caisse', icon: Coins, category: 'Finances' },
 
     // Stocks & Achats
     { id: 'fournisseurs', label: 'Fournisseurs', icon: Building2, category: 'Stocks & Achats' },
@@ -84,11 +89,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'produits', label: 'Produits', icon: Package, category: 'Stocks & Achats' },
     { id: 'stocks', label: 'Stocks', icon: Boxes, category: 'Stocks & Achats', alert: lowStockCount > 0 ? lowStockCount : undefined },
 
-    // Gestion & Paramètres
+    // Gestion & Paramètres (Interdits au Gérant)
     { id: 'rapports', label: 'Rapports', icon: BarChart3, category: 'Pilotage' },
     { id: 'utilisateurs', label: 'Utilisateurs', icon: UserCog, category: 'Pilotage' },
     { id: 'parametres', label: 'Paramètres', icon: Settings, category: 'Pilotage' },
   ];
+
+  // Le Gérant ne peut pas ajouter d'utilisateur, ni modifier les paramètres
+  const menuItems = rawMenuItems.filter((item) => {
+    if (isGerant) {
+      if (item.id === 'utilisateurs' || item.id === 'parametres') {
+        return false;
+      }
+    }
+    return true;
+  });
 
   // Group by category
   const categories = Array.from(new Set(menuItems.map((item) => item.category)));
@@ -194,16 +209,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ))}
         </div>
 
-        {/* Bottom Slogan & Phone Box */}
-        <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 text-[11px]">
-          <div className="rounded-lg bg-slate-900/90 border border-slate-800 p-2.5">
-            <p className="text-slate-400 font-medium italic text-[10px] leading-tight">
-              « Votre partenaire pour tous vos besoins numériques et d'impression »
-            </p>
-            <div className="mt-2 pt-2 border-t border-slate-800/60 flex items-center justify-between text-slate-300">
-              <span className="text-[10px] text-slate-400">Soleil 2, Daloa</span>
-              <span className="text-[10px] font-bold text-amber-400">05 66 59 45 49</span>
+        {/* Bottom User Info & Logout */}
+        <div className="p-3 border-t border-slate-800/80 bg-slate-950/80 text-[11px] space-y-2">
+          <div className="rounded-xl bg-slate-900/90 border border-slate-800 p-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-blue-950 border border-blue-800 flex items-center justify-center text-amber-400 shrink-0 font-bold text-xs">
+                {currentUser?.name?.charAt(0) || 'U'}
+              </div>
+              <div className="min-w-0">
+                <p className="text-white font-bold truncate text-xs leading-tight">
+                  {currentUser?.name}
+                </p>
+                <span
+                  className={`inline-block text-[9px] font-extrabold px-1.5 py-0.2 rounded mt-0.5 ${
+                    isGerant
+                      ? 'bg-amber-400/20 text-amber-300'
+                      : 'bg-blue-400/20 text-blue-300'
+                  }`}
+                >
+                  {currentUser?.role}
+                </span>
+              </div>
             </div>
+
+            <button
+              id="btn-sidebar-logout"
+              type="button"
+              onClick={logout}
+              title="Se déconnecter"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition shrink-0"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between text-slate-400 text-[10px] px-1">
+            <span>Daloa • Soleil 2</span>
+            <span className="font-semibold text-amber-400">05 66 59 45 49</span>
           </div>
         </div>
       </aside>

@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { AppProvider } from './data/store';
+import { AppProvider, useAppStore } from './data/store';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
+import { LoginView } from './components/LoginView';
 import {
   PrintableDocumentModal,
   PrintableDocType,
 } from './components/PrintableDocumentModal';
+import { Lock, AlertCircle } from 'lucide-react';
 
 // Views
 import { DashboardView } from './components/views/DashboardView';
+import { GerantDashboardView } from './components/views/GerantDashboardView';
 import { PrintOrdersView } from './components/views/PrintOrdersView';
 import { MaintenanceView } from './components/views/MaintenanceView';
 import { GraphicView } from './components/views/GraphicView';
@@ -27,15 +30,50 @@ import { ParametresView } from './components/views/ParametresView';
 import { CommandesView } from './components/views/CommandesView';
 
 const MainLayout: React.FC = () => {
+  const { isAuthenticated, currentUser } = useAppStore();
   const [currentView, setCurrentView] = useState<string>('dashboard');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [printDoc, setPrintDoc] = useState<PrintableDocType | null>(null);
 
+  if (!isAuthenticated) {
+    return <LoginView />;
+  }
+
+  const isGerant = currentUser?.role === 'Gérant';
+
   const renderCurrentView = () => {
+    // Restrictions pour le Gérant : pas d'utilisateurs ni de paramètres
+    if (isGerant && (currentView === 'utilisateurs' || currentView === 'parametres')) {
+      return (
+        <div className="bg-white rounded-3xl p-8 border border-amber-200 text-center max-w-md mx-auto my-12 shadow-md">
+          <div className="w-14 h-14 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl font-black text-slate-900">Accès Restreint au Gérant</h2>
+          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+            Votre profil <strong>Gérant</strong> est spécialement configuré pour la commercialisation des 5 services (devis, commandes, factures, encaissements).
+            L'administration des utilisateurs et la modification des paramètres relèvent de la direction.
+          </p>
+          <button
+            type="button"
+            onClick={() => setCurrentView('dashboard')}
+            className="mt-6 px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-sm transition"
+          >
+            Retourner au Tableau de Bord des Ventes
+          </button>
+        </div>
+      );
+    }
+
     switch (currentView) {
       case 'dashboard':
-        return (
+        return isGerant ? (
+          <GerantDashboardView
+            onNavigate={setCurrentView}
+            onOpenPrint={setPrintDoc}
+          />
+        ) : (
           <DashboardView
             onNavigate={setCurrentView}
             onOpenPrint={setPrintDoc}
@@ -90,7 +128,12 @@ const MainLayout: React.FC = () => {
       case 'parametres':
         return <ParametresView />;
       default:
-        return (
+        return isGerant ? (
+          <GerantDashboardView
+            onNavigate={setCurrentView}
+            onOpenPrint={setPrintDoc}
+          />
+        ) : (
           <DashboardView
             onNavigate={setCurrentView}
             onOpenPrint={setPrintDoc}
