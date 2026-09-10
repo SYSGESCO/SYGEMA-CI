@@ -123,6 +123,7 @@ interface AppContextType {
   addExpense: (expense: Omit<Expense, 'id' | 'expenseNumber' | 'createdAt'>) => void;
   updateExpense: (id: string, updates: Partial<Expense>) => void;
   deleteExpense: (id: string) => void;
+  resetExpenses: () => void;
 
   charges: Charge[];
   addCharge: (charge: Omit<Charge, 'id' | 'createdAt'>) => void;
@@ -262,18 +263,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [expenses, setExpenses] = useState<Expense[]>(() => {
+    if (!localStorage.getItem('sygema_ci_expenses_zero_v1')) {
+      return [];
+    }
     const saved = localStorage.getItem(`${STORAGE_KEY}_expenses`);
-    return saved ? JSON.parse(saved) : initialExpenses;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [charges, setCharges] = useState<Charge[]>(() => {
+    if (!localStorage.getItem('sygema_ci_expenses_zero_v1')) {
+      return [];
+    }
     const saved = localStorage.getItem(`${STORAGE_KEY}_charges`);
-    return saved ? JSON.parse(saved) : initialCharges;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [contingencies, setContingencies] = useState<Contingency[]>(() => {
+    if (!localStorage.getItem('sygema_ci_expenses_zero_v1')) {
+      return [];
+    }
     const saved = localStorage.getItem(`${STORAGE_KEY}_contingencies`);
-    return saved ? JSON.parse(saved) : initialContingencies;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
@@ -298,7 +308,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [cashMovements, setCashMovements] = useState<CashMovement[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY}_cashMovements`);
-    return saved ? JSON.parse(saved) : initialCashMovements;
+    const initialList: CashMovement[] = saved ? JSON.parse(saved) : initialCashMovements;
+    // Si la remise à zéro des dépenses n'a pas encore été appliquée, filtrer les anciennes sorties dépenses
+    if (!localStorage.getItem('sygema_ci_expenses_zero_v1')) {
+      return initialList.filter(
+        (m) => m.source !== 'DEPENSE' && m.source !== 'CHARGE' && m.source !== 'IMPREVU'
+      );
+    }
+    return initialList;
   });
 
   const [cashRegisterCloses, setCashRegisterCloses] = useState<CashRegisterClose[]>(() => {
@@ -324,6 +341,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('sygema_ci_erp_v4_strict_zero_init', 'true');
       resetAllData();
     }
+
+    // Remise à zéro spécifique des dépenses demandée par l'utilisateur
+    if (!localStorage.getItem('sygema_ci_expenses_zero_v1')) {
+      localStorage.setItem('sygema_ci_expenses_zero_v1', 'true');
+      localStorage.removeItem(`${STORAGE_KEY}_expenses`);
+      localStorage.removeItem(`${STORAGE_KEY}_charges`);
+      localStorage.removeItem(`${STORAGE_KEY}_contingencies`);
+      setExpenses([]);
+      setCharges([]);
+      setContingencies([]);
+      setCashMovements((prev) =>
+        prev.filter(
+          (m) => m.source !== 'DEPENSE' && m.source !== 'CHARGE' && m.source !== 'IMPREVU'
+        )
+      );
+    }
+
     setLoaded(true);
   }, []);
 
@@ -438,6 +472,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newClient: Client = {
       ...clientData,
       id: `cli_${Date.now()}`,
+      createdBy: clientData.createdBy || currentUser.name,
+      createdByRole: clientData.createdByRole || currentUser.role,
       createdAt: new Date().toISOString(),
     };
     setClients((prev) => [newClient, ...prev]);
@@ -472,6 +508,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cost,
       paidAmount: paid,
       remainingAmount: remaining,
+      createdBy: item.createdBy || currentUser.name,
+      createdByRole: item.createdByRole || currentUser.role,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -540,6 +578,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalAmount: total,
       paidAmount: paid,
       remainingAmount: remaining,
+      createdBy: item.createdBy || currentUser.name,
+      createdByRole: item.createdByRole || currentUser.role,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -577,6 +617,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: paid >= total ? 'Payé' : paid > 0 ? 'Partiellement payé' : 'Non payé',
       paymentMethod: item.paymentMethod,
       notes: item.observations || 'Facture générée automatiquement.',
+      createdBy: currentUser.name,
+      createdByRole: currentUser.role,
       createdAt: new Date().toISOString(),
     };
     setInvoices((prev) => [invoice, ...prev]);
@@ -594,6 +636,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         reference: `PAY-${num}`,
         notes: `Paiement / Acompte commande ${num}`,
         receivedBy: currentUser.name,
+        createdByRole: currentUser.role,
       });
     }
   };
@@ -684,6 +727,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       price,
       advance,
       remainingAmount: remaining,
+      createdBy: item.createdBy || currentUser.name,
+      createdByRole: item.createdByRole || currentUser.role,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -703,6 +748,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         reference: `PAY-${num}`,
         notes: `Acompte projet graphique ${num}`,
         receivedBy: currentUser.name,
+        createdByRole: currentUser.role,
       });
     }
   };
@@ -751,6 +797,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       budget,
       advance,
       remainingAmount: remaining,
+      createdBy: item.createdBy || currentUser.name,
+      createdByRole: item.createdByRole || currentUser.role,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -770,6 +818,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         reference: `PAY-${num}`,
         notes: `Acompte projet numérique ${num}`,
         receivedBy: currentUser.name,
+        createdByRole: currentUser.role,
       });
     }
   };
@@ -814,6 +863,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalAmount: total,
       advance,
       remainingAmount: remaining,
+      createdBy: item.createdBy || currentUser.name,
+      createdByRole: item.createdByRole || currentUser.role,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -851,6 +902,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: advance >= total ? 'Payé' : advance > 0 ? 'Partiellement payé' : 'Non payé',
       paymentMethod: 'Espèces',
       notes: item.observations || 'Facture commande tee-shirts.',
+      createdBy: currentUser.name,
+      createdByRole: currentUser.role,
       createdAt: new Date().toISOString(),
     };
     setInvoices((prev) => [invoice, ...prev]);
@@ -868,6 +921,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         reference: `PAY-${num}`,
         notes: `Acompte commande tee-shirts ${num}`,
         receivedBy: currentUser.name,
+        createdByRole: currentUser.role,
       });
     }
   };
@@ -959,6 +1013,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: p.status,
         date: p.orderDate,
         deliveryDate: p.deliveryDate,
+        createdBy: p.createdBy,
+        createdByRole: p.createdByRole,
         createdAt: p.createdAt,
       });
     });
@@ -981,6 +1037,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: m.status,
         date: m.depositDate,
         deliveryDate: m.deliveryDate || 'Non spécifié',
+        createdBy: m.createdBy,
+        createdByRole: m.createdByRole,
         createdAt: m.createdAt,
       });
     });
@@ -1003,6 +1061,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: g.status,
         date: g.orderDate,
         deliveryDate: g.expectedDeliveryDate,
+        createdBy: g.createdBy,
+        createdByRole: g.createdByRole,
         createdAt: g.createdAt,
       });
     });
@@ -1025,6 +1085,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: d.status,
         date: d.startDate,
         deliveryDate: d.expectedDeliveryDate,
+        createdBy: d.createdBy,
+        createdByRole: d.createdByRole,
         createdAt: d.createdAt,
       });
     });
@@ -1047,6 +1109,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: t.status,
         date: t.orderDate,
         deliveryDate: t.expectedDate,
+        createdBy: t.createdBy,
+        createdByRole: t.createdByRole,
         createdAt: t.createdAt,
       });
     });
@@ -1061,6 +1125,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...item,
       id: `dev_${Date.now()}`,
       quoteNumber: num,
+      createdBy: item.createdBy || currentUser.name,
+      createdByRole: item.createdByRole || currentUser.role,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -1188,6 +1254,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       paidAmount: paid,
       remainingAmount: remaining,
       status: paid >= total ? 'Payé' : paid > 0 ? 'Partiellement payé' : 'Non payé',
+      createdBy: item.createdBy || currentUser.name,
+      createdByRole: item.createdByRole || currentUser.role,
       createdAt: new Date().toISOString(),
     };
     setInvoices((prev) => [newInv, ...prev]);
@@ -1209,6 +1277,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `pay_${Date.now()}`,
       paymentNumber: num,
       amount,
+      receivedBy: paymentData.receivedBy || currentUser.name,
+      createdByRole: paymentData.createdByRole || currentUser.role,
       createdAt: new Date().toISOString(),
     };
 
@@ -1262,6 +1332,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `dep_${Date.now()}`,
       expenseNumber: num,
       amount,
+      registeredBy: expenseData.registeredBy || currentUser.name,
+      createdByRole: expenseData.createdByRole || currentUser.role,
       createdAt: new Date().toISOString(),
     };
     setExpenses((prev) => [newExp, ...prev]);
@@ -1291,6 +1363,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteExpense = (id: string) => {
     setExpenses((prev) => prev.filter((e) => e.id !== id));
     addAuditLog('SUPPRESSION_DEPENSE', 'DEPENSES', `Suppression dépense ID: ${id}`);
+  };
+
+  const resetExpenses = () => {
+    setExpenses([]);
+    setCharges([]);
+    setContingencies([]);
+    setCashMovements((prev) =>
+      prev.filter(
+        (m) => m.source !== 'DEPENSE' && m.source !== 'CHARGE' && m.source !== 'IMPREVU'
+      )
+    );
+    localStorage.removeItem(`${STORAGE_KEY}_expenses`);
+    localStorage.removeItem(`${STORAGE_KEY}_charges`);
+    localStorage.removeItem(`${STORAGE_KEY}_contingencies`);
+    localStorage.setItem('sygema_ci_expenses_zero_applied_v1', 'true');
+    addAuditLog('REMISE_A_ZERO', 'DEPENSES', 'Remise à zéro complète du registre des dépenses et décaissements');
   };
 
   // CHARGES
@@ -1807,6 +1895,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addExpense,
         updateExpense,
         deleteExpense,
+        resetExpenses,
         charges,
         addCharge,
         updateCharge,

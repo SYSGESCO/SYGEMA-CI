@@ -34,6 +34,8 @@ export interface Client {
   address: string;
   type: ClientType;
   notes?: string;
+  createdBy?: string;
+  createdByRole?: string;
   createdAt: string;
 }
 
@@ -59,6 +61,8 @@ export interface MaintenanceIntervention {
   status: MaintenanceStatus;
   deliveryDate?: string;
   observations: string;
+  createdBy?: string;
+  createdByRole?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -94,6 +98,8 @@ export interface PrintOrder {
   remainingAmount: number;
   observations: string;
   consumedProducts?: Array<{ productId: string; quantity: number; productName: string }>;
+  createdBy?: string;
+  createdByRole?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -123,6 +129,8 @@ export interface GraphicProject {
   modificationCount: number;
   status: GraphicStatus;
   attachedFiles?: string[];
+  createdBy?: string;
+  createdByRole?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -149,6 +157,8 @@ export interface DigitalProject {
   status: DigitalStatus;
   notes: string;
   attachedFiles?: string[];
+  createdBy?: string;
+  createdByRole?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -177,6 +187,8 @@ export interface TshirtOrder {
   status: TshirtStatus;
   observations: string;
   consumedProducts?: Array<{ productId: string; quantity: number; productName: string }>;
+  createdBy?: string;
+  createdByRole?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -206,6 +218,8 @@ export interface UnifiedOrder {
   status: string;
   date: string;
   deliveryDate: string;
+  createdBy?: string;
+  createdByRole?: string;
   createdAt: string;
 }
 
@@ -234,6 +248,8 @@ export interface Quote {
   validUntil: string;
   notes: string;
   convertedOrderId?: string;
+  createdBy?: string;
+  createdByRole?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -267,6 +283,8 @@ export interface Invoice {
   status: InvoiceStatus;
   paymentMethod?: string;
   notes: string;
+  createdBy?: string;
+  createdByRole?: string;
   createdAt: string;
 }
 
@@ -287,6 +305,7 @@ export interface Payment {
   reference: string;
   notes: string;
   receivedBy: string;
+  createdByRole?: string;
   createdAt: string;
 }
 
@@ -327,6 +346,7 @@ export interface Expense {
   proofName?: string;
   observations: string;
   registeredBy: string;
+  createdByRole?: string;
   purchaseOrderId?: string;
   createdAt: string;
 }

@@ -146,11 +146,7 @@ export const LoginView: React.FC = () => {
                   <p className="text-[11px] text-slate-300">
                     Login : <strong className="text-white">admin</strong>
                   </p>
-                  <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                    <span>Mot de passe :</span>
-                    <span className="text-blue-300 font-semibold italic text-[11px]">•••••••• (Confidentiel)</span>
-                  </p>
-                  <p className="text-[10px] text-blue-300/80 mt-1.5">
+                  <p className="text-[10px] text-blue-300/80 mt-2">
                     Accès total direction, paramètres & utilisateurs
                   </p>
                 </button>

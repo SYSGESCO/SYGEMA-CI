@@ -13,6 +13,9 @@ import {
   Calendar,
   Trash2,
   Filter,
+  RotateCcw,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import { Expense, ExpenseCategory, PaymentMethod } from '../../types';
 
@@ -26,6 +29,7 @@ export const DepensesView: React.FC<DepensesViewProps> = ({ initialTab = 'depens
     cashMovements,
     addExpense,
     deleteExpense,
+    resetExpenses,
     currentUser,
     cashBalance,
     totalIncome,
@@ -38,6 +42,8 @@ export const DepensesView: React.FC<DepensesViewProps> = ({ initialTab = 'depens
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetSuccessMsg, setResetSuccessMsg] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     category: 'Consommables & Fournitures' as ExpenseCategory,
@@ -108,16 +114,47 @@ export const DepensesView: React.FC<DepensesViewProps> = ({ initialTab = 'depens
           </p>
         </div>
 
-        <button
-          id="btn-add-expense"
-          type="button"
-          onClick={handleOpenAdd}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm shadow-md transition"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Enregistrer une Dépense</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {expenses.length > 0 && (
+            <button
+              id="btn-reset-expenses"
+              type="button"
+              onClick={() => setIsResetModalOpen(true)}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs sm:text-sm transition"
+              title="Remettre à zéro toutes les dépenses"
+            >
+              <RotateCcw className="w-4 h-4 text-rose-600" />
+              <span>Remettre à zéro</span>
+            </button>
+          )}
+
+          <button
+            id="btn-add-expense"
+            type="button"
+            onClick={handleOpenAdd}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm shadow-md transition"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Enregistrer une Dépense</span>
+          </button>
+        </div>
       </div>
+
+      {resetSuccessMsg && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center justify-between text-xs sm:text-sm animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>Le registre des dépenses et décaissements a été remis à zéro avec succès (0 FCFA).</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setResetSuccessMsg(false)}
+            className="text-emerald-700 hover:text-emerald-900 font-bold text-xs"
+          >
+            Fermer
+          </button>
+        </div>
+      )}
 
       {/* Financial Overview KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -515,6 +552,45 @@ export const DepensesView: React.FC<DepensesViewProps> = ({ initialTab = 'depens
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CONFIRM RESET */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mb-4">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-black text-slate-900">
+              Remise à zéro des dépenses
+            </h3>
+            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+              Êtes-vous certain de vouloir remettre à zéro l'ensemble des dépenses et décaissements ?
+              Cette opération effacera le registre des dépenses et réajustera le total des sorties à 0 FCFA.
+            </p>
+            <div className="flex items-center justify-end gap-2.5 mt-6">
+              <button
+                type="button"
+                onClick={() => setIsResetModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  resetExpenses();
+                  setIsResetModalOpen(false);
+                  setResetSuccessMsg(true);
+                  setTimeout(() => setResetSuccessMsg(false), 4000);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition"
+              >
+                Confirmer la Remise à Zéro
+              </button>
+            </div>
           </div>
         </div>
       )}
