@@ -78,6 +78,8 @@ export const PrintOrdersView: React.FC<PrintOrdersViewProps> = ({ onOpenPrint })
   });
 
   const servicesList: PrintServiceType[] = [
+    'Photo minute (Planche 4/8/12 photos, Fond blanc/bleu, CNI/Passeport/Concours)',
+    'Inscription en ligne scolaire (MENA, Primaire, BEPC, BAC, Université)',
     'Inscription en ligne (Concours, Examens, Bourses, Universités)',
     'Rédaction & Saisie d\'exposé (Scolaire & Universitaire)',
     'Confection de carnets (Reçus, Factures, Bons à souche)',
@@ -242,7 +244,9 @@ export const PrintOrdersView: React.FC<PrintOrdersViewProps> = ({ onOpenPrint })
                     setSelectedServiceFilter('TOUS');
                   } else {
                     // Filter by key term
-                    if (srv.includes('Inscription')) setSelectedServiceFilter('Inscription');
+                    if (srv.includes('Photo minute')) setSelectedServiceFilter('Photo minute');
+                    else if (srv.includes('scolaire')) setSelectedServiceFilter('scolaire');
+                    else if (srv.includes('Inscription')) setSelectedServiceFilter('Inscription');
                     else if (srv.includes('exposé')) setSelectedServiceFilter('exposé');
                     else if (srv.includes('carnet')) setSelectedServiceFilter('carnet');
                     else if (srv.includes('Reliure')) setSelectedServiceFilter('Reliure');
@@ -272,7 +276,9 @@ export const PrintOrdersView: React.FC<PrintOrdersViewProps> = ({ onOpenPrint })
           </span>
           {[
             { label: 'Tous', filter: 'TOUS' },
-            { label: '📝 Inscriptions en ligne', filter: 'Inscription' },
+            { label: '📸 Photo minute', filter: 'Photo minute' },
+            { label: '🎓 Inscriptions scolaires', filter: 'scolaire' },
+            { label: '📝 Inscriptions concours', filter: 'Inscription' },
             { label: '📚 Exposés', filter: 'exposé' },
             { label: '🧾 Carnets', filter: 'carnet' },
             { label: '📑 Reliures', filter: 'Reliure' },

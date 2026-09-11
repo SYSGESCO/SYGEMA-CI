@@ -22,6 +22,8 @@ import {
   AppNotification,
   CompanyInfo,
   SupplySale,
+  PhotoMinuteOrder,
+  SchoolRegistration,
 } from '../types';
 
 export const initialCompanyInfo: CompanyInfo = {
@@ -65,6 +67,8 @@ export const initialUsers: User[] = [
 export const initialClients: Client[] = [];
 export const initialMaintenance: MaintenanceIntervention[] = [];
 export const initialPrintOrders: PrintOrder[] = [];
+export const initialPhotoMinuteOrders: PhotoMinuteOrder[] = [];
+export const initialSchoolRegistrations: SchoolRegistration[] = [];
 export const initialGraphicProjects: GraphicProject[] = [];
 export const initialDigitalProjects: DigitalProject[] = [];
 export const initialTshirtOrders: TshirtOrder[] = [];

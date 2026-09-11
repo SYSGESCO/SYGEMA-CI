@@ -2,13 +2,15 @@ import React from 'react';
 import { useAppStore } from '../data/store';
 import { formatFCFA, formatDateFr, formatDateTimeFr } from '../utils/formatters';
 import { Printer, Download, X, CheckCircle, ShieldCheck } from 'lucide-react';
-import { Invoice, Quote, Payment, MaintenanceIntervention } from '../types';
+import { Invoice, Quote, Payment, MaintenanceIntervention, PhotoMinuteOrder, SchoolRegistration } from '../types';
 
 export type PrintableDocType =
   | { type: 'invoice'; data: Invoice }
   | { type: 'quote'; data: Quote }
   | { type: 'paymentReceipt'; data: Payment }
-  | { type: 'maintenanceSheet'; data: MaintenanceIntervention };
+  | { type: 'maintenanceSheet'; data: MaintenanceIntervention }
+  | { type: 'photoReceipt'; data: PhotoMinuteOrder }
+  | { type: 'schoolRegistrationReceipt'; data: SchoolRegistration };
 
 interface PrintableDocumentModalProps {
   doc: PrintableDocType | null;
@@ -501,6 +503,229 @@ export const PrintableDocumentModal: React.FC<PrintableDocumentModalProps> = ({
 
                 <div className="mt-2 text-[9px] text-slate-500 leading-tight italic">
                   * Conditions : Présentez obligatoirement ce ticket lors du retrait. SYGEMA CI garantit les réparations matérielles pendant 30 jours (hors chocs et surtensions). Tout appareil non réclamé sous 90 jours sera liquidé pour couvrir les frais.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 5. TICKET DE RETRAIT PHOTO MINUTE */}
+          {doc.type === 'photoReceipt' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-black uppercase tracking-wider text-amber-600">
+                    Studio Photo Express • Tirage Immédiat
+                  </span>
+                  <h2 className="text-xl font-black text-blue-950">
+                    TICKET DE RETRAIT PHOTO MINUTE
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    N° Commande : <strong className="font-mono text-blue-900">{doc.data.orderNumber}</strong>
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-slate-500 block">Date & Heure</span>
+                  <span className="font-bold text-slate-800 text-sm">
+                    {formatDateFr(doc.data.date)}
+                  </span>
+                  <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-900 border border-blue-200">
+                    Statut : {doc.data.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Client & Photo Details */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                <div>
+                  <span className="text-slate-400 font-bold uppercase text-[10px] block">Client / Bénéficiaire</span>
+                  <span className="font-black text-slate-900 text-sm">{doc.data.clientName}</span>
+                  <span className="text-slate-600 block mt-0.5">Contact : {doc.data.phone || 'Non renseigné'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-bold uppercase text-[10px] block">Destination / Usage</span>
+                  <span className="font-bold text-slate-900">{doc.data.purpose}</span>
+                  <span className="text-slate-600 block mt-0.5 font-medium">Fond : {doc.data.background}</span>
+                </div>
+              </div>
+
+              {/* Package Summary */}
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="bg-blue-950 text-white font-bold uppercase text-[10px]">
+                    <th className="p-3 text-left">Formule / Tirage</th>
+                    <th className="p-3 text-center">Quantité</th>
+                    <th className="p-3 text-center">Option Numérique</th>
+                    <th className="p-3 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 border-b border-slate-200">
+                  <tr>
+                    <td className="p-3 font-bold text-slate-900">
+                      {doc.data.formatLabel}
+                      {doc.data.observations && (
+                        <span className="block text-[10px] text-slate-500 font-normal italic">
+                          Note : {doc.data.observations}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-3 text-center font-bold text-slate-800">
+                      {doc.data.photoCount} photo{doc.data.photoCount > 1 ? 's' : ''} HD
+                    </td>
+                    <td className="p-3 text-center">
+                      {doc.data.sendDigital ? (
+                        <span className="text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          WhatsApp HD : {doc.data.whatsappOrEmail || doc.data.phone}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-[10px]">Non</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-right font-black text-slate-900">
+                      {formatFCFA(doc.data.totalAmount)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Financial Box */}
+              <div className="flex justify-end">
+                <div className="w-64 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs">
+                  <div className="flex justify-between font-bold text-slate-700">
+                    <span>Montant Total :</span>
+                    <span className="text-slate-950 font-black">{formatFCFA(doc.data.totalAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-700 font-bold">
+                    <span>Payé ({doc.data.paymentMethod}) :</span>
+                    <span>{formatFCFA(doc.data.paidAmount)}</span>
+                  </div>
+                  <div className="flex justify-between font-black text-sm pt-1.5 border-t border-slate-200">
+                    <span className="text-slate-900">Reste à Régler :</span>
+                    <span className={doc.data.remainingAmount > 0 ? 'text-rose-600' : 'text-emerald-600'}>
+                      {formatFCFA(doc.data.remainingAmount)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[10px] text-amber-950 space-y-1">
+                <p className="font-bold uppercase tracking-wider">Instructions de retrait :</p>
+                <p>• Veuillez présenter obligatoirement ce ticket au guichet du studio pour récupérer vos photos imprimées.</p>
+                <p>• Si vous avez souscrit à l'option numérique, vos photos HD vous seront transmises sur WhatsApp dès la validation du tirage.</p>
+                <p>• Studio SYGEMA CI : Daloa, Quartier Soleil 2 • Tél / WhatsApp : 05 66 59 45 49</p>
+              </div>
+            </div>
+          )}
+
+          {/* 6. RÉCÉPISSÉ D'INSCRIPTION EN LIGNE SCOLAIRE & UNIVERSITAIRE */}
+          {doc.type === 'schoolRegistrationReceipt' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700">
+                    Guichet Agréé Cyber & Inscriptions Officielles
+                  </span>
+                  <h2 className="text-xl font-black text-blue-950">
+                    RÉCÉPISSÉ D'ENRÔLEMENT & INSCRIPTION EN LIGNE
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    N° Dossier : <strong className="font-mono text-emerald-900">{doc.data.registrationNumber}</strong>
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-slate-500 block">Date de traitement</span>
+                  <span className="font-bold text-slate-800 text-sm">
+                    {formatDateFr(doc.data.date)}
+                  </span>
+                  <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-200">
+                    {doc.data.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Student identification */}
+              <div className="p-4 bg-emerald-50/50 border border-emerald-200 rounded-xl space-y-3 text-xs">
+                <h3 className="font-black text-emerald-950 uppercase text-[11px] tracking-wider border-b border-emerald-200/60 pb-1.5">
+                  Identification de l'Élève / Candidat
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div>
+                    <span className="text-slate-500 text-[10px] font-bold uppercase block">Nom et Prénoms</span>
+                    <span className="font-black text-slate-900 text-sm">{doc.data.studentName}</span>
+                    {doc.data.studentGender && (
+                      <span className="text-[10px] text-slate-500">Genre : {doc.data.studentGender === 'M' ? 'Masculin' : 'Féminin'}</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[10px] font-bold uppercase block">Matricule MENA / N° Candidat</span>
+                    <span className="font-mono font-black text-emerald-900 text-sm">{doc.data.matriculeMENA || 'NON ASSIGNÉ'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[10px] font-bold uppercase block">Année Académique</span>
+                    <span className="font-bold text-slate-800">{doc.data.academicYear}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[10px] font-bold uppercase block">Établissement / Université</span>
+                    <span className="font-bold text-slate-800">{doc.data.schoolName}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[10px] font-bold uppercase block">Classe / Niveau</span>
+                    <span className="font-bold text-slate-800">{doc.data.classLevel}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[10px] font-bold uppercase block">Parent / Tuteur</span>
+                    <span className="font-bold text-slate-800">{doc.data.clientName} ({doc.data.phone})</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transaction & Fees */}
+              <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
+                <div className="bg-slate-900 text-white p-3 font-bold flex justify-between items-center text-[11px] uppercase">
+                  <span>Prestation & Détail Financier</span>
+                  <span>Opérateur : {doc.data.paymentOperator}</span>
+                </div>
+                <div className="p-4 space-y-2">
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-700 font-medium">Type d'opération :</span>
+                    <span className="font-bold text-slate-900">{doc.data.registrationType}</span>
+                  </div>
+                  {doc.data.transactionReference && (
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-700 font-medium">Référence quittance TrésorPay / Opérateur :</span>
+                      <span className="font-mono font-bold text-blue-900">{doc.data.transactionReference}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-700 font-medium">Frais officiels de l'État reversés :</span>
+                    <span className="font-bold text-slate-900">{formatFCFA(doc.data.officialFee)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-700 font-medium">Frais de traitement & impression SYGEMA CI :</span>
+                    <span className="font-bold text-emerald-800">{formatFCFA(doc.data.serviceFee)}</span>
+                  </div>
+                  <div className="flex justify-between pt-2 text-sm font-black">
+                    <span className="text-slate-900 uppercase">Montant Total Réglé :</span>
+                    <span className="text-emerald-900 text-base">{formatFCFA(doc.data.totalAmount)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Certification stamp box */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200 text-xs">
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Opérateur de Guichet</span>
+                  <span className="font-bold text-slate-800">Cyber SYGEMA CI - Daloa</span>
+                  <p className="text-[10px] text-slate-500 mt-1 italic">
+                    Dossier vérifié et validé sur la plateforme officielle.
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-center flex flex-col justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Cachet & Signature SYGEMA CI</span>
+                  <div className="py-4 text-[11px] font-black text-blue-900 tracking-wider">
+                    [ CACHET ÉLECTRONIQUE SYGEMA CI ]
+                  </div>
+                  <span className="text-[9px] text-slate-400">Certifié conforme</span>
                 </div>
               </div>
             </div>

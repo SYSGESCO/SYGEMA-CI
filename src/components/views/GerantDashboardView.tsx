@@ -33,6 +33,8 @@ import {
   Wallet,
   TrendingUp,
   Receipt,
+  Camera,
+  GraduationCap,
 } from 'lucide-react';
 import { PrintableDocType } from '../PrintableDocumentModal';
 import { LiveClock } from '../LiveClock';
@@ -51,6 +53,8 @@ export const GerantDashboardView: React.FC<GerantDashboardViewProps> = ({
     clients,
     maintenance,
     printOrders,
+    photoMinuteOrders,
+    schoolRegistrations,
     graphicProjects,
     digitalProjects,
     tshirtOrders,
@@ -133,6 +137,26 @@ export const GerantDashboardView: React.FC<GerantDashboardViewProps> = ({
       count: printOrders.length,
       revenue: printOrders.reduce((sum, p) => sum + (p.paidAmount || 0), 0),
       desc: 'Impressions, reliures, photocopies, tirages A4/A3',
+    },
+    {
+      id: 'photo_minute',
+      name: 'Photo Minute & Studio Express',
+      icon: Camera,
+      color: 'from-amber-600 to-yellow-600',
+      bgColor: 'bg-amber-50 text-amber-950 border-amber-200',
+      count: (photoMinuteOrders || []).length,
+      revenue: (photoMinuteOrders || []).reduce((sum, p) => sum + (p.paidAmount || 0), 0),
+      desc: 'Photos d\'identité CNI, Passeport, tirage en 5 min, WhatsApp HD',
+    },
+    {
+      id: 'inscription_scolaire',
+      name: 'Inscriptions en Ligne Scolaires',
+      icon: GraduationCap,
+      color: 'from-emerald-600 to-teal-600',
+      bgColor: 'bg-emerald-50 text-emerald-950 border-emerald-200',
+      count: (schoolRegistrations || []).length,
+      revenue: (schoolRegistrations || []).reduce((sum, s) => sum + (s.paidAmount || 0), 0),
+      desc: 'Inscriptions MENA, BEPC, BAC, Université UJLoG, TrésorMoney',
     },
     {
       id: 'maintenance',

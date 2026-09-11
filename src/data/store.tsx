@@ -27,6 +27,8 @@ import {
   ServiceCategory,
   SupplySale,
   SupplySaleItem,
+  PhotoMinuteOrder,
+  SchoolRegistration,
 } from '../types';
 
 import {
@@ -35,6 +37,8 @@ import {
   initialClients,
   initialMaintenance,
   initialPrintOrders,
+  initialPhotoMinuteOrders,
+  initialSchoolRegistrations,
   initialGraphicProjects,
   initialDigitalProjects,
   initialTshirtOrders,
@@ -104,6 +108,18 @@ interface AppContextType {
   updateTshirtOrder: (id: string, updates: Partial<TshirtOrder>) => void;
   deleteTshirtOrder: (id: string) => void;
   consumeStockForTshirt: (orderId: string, items: Array<{ productId: string; quantity: number }>) => void;
+
+  // Photo Minute
+  photoMinuteOrders: PhotoMinuteOrder[];
+  addPhotoMinuteOrder: (item: Omit<PhotoMinuteOrder, 'id' | 'orderNumber' | 'createdAt' | 'updatedAt' | 'remainingAmount'>) => void;
+  updatePhotoMinuteOrder: (id: string, updates: Partial<PhotoMinuteOrder>) => void;
+  deletePhotoMinuteOrder: (id: string) => void;
+
+  // Inscription Scolaire
+  schoolRegistrations: SchoolRegistration[];
+  addSchoolRegistration: (item: Omit<SchoolRegistration, 'id' | 'registrationNumber' | 'createdAt' | 'updatedAt' | 'remainingAmount'>) => void;
+  updateSchoolRegistration: (id: string, updates: Partial<SchoolRegistration>) => void;
+  deleteSchoolRegistration: (id: string) => void;
 
   // Unified Orders
   getAllOrders: () => UnifiedOrder[];
@@ -270,6 +286,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : initialTshirtOrders;
   });
 
+  const [photoMinuteOrders, setPhotoMinuteOrders] = useState<PhotoMinuteOrder[]>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_photoMinuteOrders`);
+    return saved ? JSON.parse(saved) : initialPhotoMinuteOrders;
+  });
+
+  const [schoolRegistrations, setSchoolRegistrations] = useState<SchoolRegistration[]>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_schoolRegistrations`);
+    return saved ? JSON.parse(saved) : initialSchoolRegistrations;
+  });
+
   const [quotes, setQuotes] = useState<Quote[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY}_quotes`);
     return saved ? JSON.parse(saved) : initialQuotes;
@@ -380,6 +406,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clients,
     maintenance,
     printOrders,
+    photoMinuteOrders,
+    schoolRegistrations,
     graphicProjects,
     digitalProjects,
     tshirtOrders,
@@ -400,32 +428,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     auditLogs,
   });
 
+  // Helper to merge collections without losing local or remote data
+  const mergeCollections = <T extends { id: string; updatedAt?: string; createdAt?: string }>(
+    localList: T[],
+    serverList: T[]
+  ): T[] => {
+    if (!Array.isArray(serverList)) return localList;
+    if (!Array.isArray(localList) || localList.length === 0) return serverList;
+
+    const map = new Map<string, T>();
+    serverList.forEach((item) => {
+      if (item && item.id) map.set(item.id, item);
+    });
+    localList.forEach((item) => {
+      if (!item || !item.id) return;
+      const existing = map.get(item.id);
+      if (!existing) {
+        map.set(item.id, item);
+      } else {
+        const localTime = new Date(item.updatedAt || item.createdAt || 0).getTime();
+        const serverTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+        if (localTime >= serverTime) {
+          map.set(item.id, item);
+        }
+      }
+    });
+    return Array.from(map.values());
+  };
+
   // Hydrate store from server data
   const applyServerData = (d: any) => {
     if (!d) return;
     if (d.company) setCompany(d.company);
-    if (Array.isArray(d.users)) setUsers(d.users);
-    if (Array.isArray(d.clients)) setClients(d.clients);
-    if (Array.isArray(d.maintenance)) setMaintenance(d.maintenance);
-    if (Array.isArray(d.printOrders)) setPrintOrders(d.printOrders);
-    if (Array.isArray(d.graphicProjects)) setGraphicProjects(d.graphicProjects);
-    if (Array.isArray(d.digitalProjects)) setDigitalProjects(d.digitalProjects);
-    if (Array.isArray(d.tshirtOrders)) setTshirtOrders(d.tshirtOrders);
-    if (Array.isArray(d.quotes)) setQuotes(d.quotes);
-    if (Array.isArray(d.invoices)) setInvoices(d.invoices);
-    if (Array.isArray(d.payments)) setPayments(d.payments);
-    if (Array.isArray(d.expenses)) setExpenses(d.expenses);
-    if (Array.isArray(d.charges)) setCharges(d.charges);
-    if (Array.isArray(d.contingencies)) setContingencies(d.contingencies);
-    if (Array.isArray(d.suppliers)) setSuppliers(d.suppliers);
-    if (Array.isArray(d.products)) setProducts(d.products);
-    if (Array.isArray(d.supplySales)) setSupplySales(d.supplySales);
-    if (Array.isArray(d.stockMovements)) setStockMovements(d.stockMovements);
-    if (Array.isArray(d.purchaseOrders)) setPurchaseOrders(d.purchaseOrders);
-    if (Array.isArray(d.cashMovements)) setCashMovements(d.cashMovements);
-    if (Array.isArray(d.cashRegisterCloses)) setCashRegisterCloses(d.cashRegisterCloses);
-    if (Array.isArray(d.notifications)) setNotifications(d.notifications);
-    if (Array.isArray(d.auditLogs)) setAuditLogs(d.auditLogs);
+    if (Array.isArray(d.users)) setUsers((prev) => mergeCollections(prev, d.users));
+    if (Array.isArray(d.clients)) setClients((prev) => mergeCollections(prev, d.clients));
+    if (Array.isArray(d.maintenance)) setMaintenance((prev) => mergeCollections(prev, d.maintenance));
+    if (Array.isArray(d.printOrders)) setPrintOrders((prev) => mergeCollections(prev, d.printOrders));
+    if (Array.isArray(d.photoMinuteOrders)) setPhotoMinuteOrders((prev) => mergeCollections(prev, d.photoMinuteOrders));
+    if (Array.isArray(d.schoolRegistrations)) setSchoolRegistrations((prev) => mergeCollections(prev, d.schoolRegistrations));
+    if (Array.isArray(d.graphicProjects)) setGraphicProjects((prev) => mergeCollections(prev, d.graphicProjects));
+    if (Array.isArray(d.digitalProjects)) setDigitalProjects((prev) => mergeCollections(prev, d.digitalProjects));
+    if (Array.isArray(d.tshirtOrders)) setTshirtOrders((prev) => mergeCollections(prev, d.tshirtOrders));
+    if (Array.isArray(d.quotes)) setQuotes((prev) => mergeCollections(prev, d.quotes));
+    if (Array.isArray(d.invoices)) setInvoices((prev) => mergeCollections(prev, d.invoices));
+    if (Array.isArray(d.payments)) setPayments((prev) => mergeCollections(prev, d.payments));
+    if (Array.isArray(d.expenses)) setExpenses((prev) => mergeCollections(prev, d.expenses));
+    if (Array.isArray(d.charges)) setCharges((prev) => mergeCollections(prev, d.charges));
+    if (Array.isArray(d.contingencies)) setContingencies((prev) => mergeCollections(prev, d.contingencies));
+    if (Array.isArray(d.suppliers)) setSuppliers((prev) => mergeCollections(prev, d.suppliers));
+    if (Array.isArray(d.products)) setProducts((prev) => mergeCollections(prev, d.products));
+    if (Array.isArray(d.supplySales)) setSupplySales((prev) => mergeCollections(prev, d.supplySales));
+    if (Array.isArray(d.stockMovements)) setStockMovements((prev) => mergeCollections(prev, d.stockMovements));
+    if (Array.isArray(d.purchaseOrders)) setPurchaseOrders((prev) => mergeCollections(prev, d.purchaseOrders));
+    if (Array.isArray(d.cashMovements)) setCashMovements((prev) => mergeCollections(prev, d.cashMovements));
+    if (Array.isArray(d.cashRegisterCloses)) setCashRegisterCloses((prev) => mergeCollections(prev, d.cashRegisterCloses));
+    if (Array.isArray(d.notifications)) setNotifications((prev) => mergeCollections(prev, d.notifications));
+    if (Array.isArray(d.auditLogs)) setAuditLogs((prev) => mergeCollections(prev, d.auditLogs));
   };
 
   // Push snapshot to server
@@ -536,6 +594,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem(`${STORAGE_KEY}_clients`, JSON.stringify(clients));
       localStorage.setItem(`${STORAGE_KEY}_maintenance`, JSON.stringify(maintenance));
       localStorage.setItem(`${STORAGE_KEY}_printOrders`, JSON.stringify(printOrders));
+      localStorage.setItem(`${STORAGE_KEY}_photoMinuteOrders`, JSON.stringify(photoMinuteOrders));
+      localStorage.setItem(`${STORAGE_KEY}_schoolRegistrations`, JSON.stringify(schoolRegistrations));
       localStorage.setItem(`${STORAGE_KEY}_graphicProjects`, JSON.stringify(graphicProjects));
       localStorage.setItem(`${STORAGE_KEY}_digitalProjects`, JSON.stringify(digitalProjects));
       localStorage.setItem(`${STORAGE_KEY}_tshirtOrders`, JSON.stringify(tshirtOrders));
@@ -571,6 +631,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clients,
     maintenance,
     printOrders,
+    photoMinuteOrders,
+    schoolRegistrations,
     graphicProjects,
     digitalProjects,
     tshirtOrders,
@@ -1167,6 +1229,223 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addAuditLog('CONSOMMATION_STOCK_TSHIRT', 'STOCKS', `Sortie de stock validée pour tee-shirts commande ${order.orderNumber}`);
   };
 
+  // PHOTO MINUTE
+  const addPhotoMinuteOrder = (
+    item: Omit<PhotoMinuteOrder, 'id' | 'orderNumber' | 'createdAt' | 'updatedAt' | 'remainingAmount'>
+  ) => {
+    const num = `PHO-2026-${String(photoMinuteOrders.length + 1).padStart(4, '0')}`;
+    const total = Number(item.totalAmount) || 0;
+    const paid = Number(item.paidAmount) || 0;
+    const remaining = Math.max(0, total - paid);
+
+    const newOrder: PhotoMinuteOrder = {
+      ...item,
+      id: `pho_${Date.now()}`,
+      orderNumber: num,
+      totalAmount: total,
+      paidAmount: paid,
+      remainingAmount: remaining,
+      createdBy: item.createdBy || currentUser.name,
+      createdByRole: item.createdByRole || currentUser.role,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setPhotoMinuteOrders((prev) => [newOrder, ...prev]);
+    addAuditLog('NOUVELLE_PHOTO_MINUTE', 'PHOTO_MINUTE', `Photo minute ${num} enregistrée pour ${item.clientName} (${item.formatLabel} - ${item.photoCount} photos)`);
+    triggerNotification('order', 'Nouvelle commande Photo Minute', `${num} - ${item.clientName} : ${total.toLocaleString('fr-FR')} FCFA`, 'photo_minute');
+
+    // Create Invoice automatically
+    const invNum = `FAC-2026-${String(invoices.length + 94).padStart(4, '0')}`;
+    const client = clients.find((c) => c.id === item.clientId);
+    const invoice: Invoice = {
+      id: `fac_${Date.now()}`,
+      invoiceNumber: invNum,
+      orderId: newOrder.id,
+      category: 'photo_minute' as any,
+      clientId: item.clientId,
+      clientName: item.clientName,
+      clientPhone: item.phone,
+      clientAddress: client?.address || 'Daloa',
+      date: item.date,
+      dueDate: item.deliveryDate,
+      items: [
+        {
+          id: `item_${Date.now()}`,
+          description: `Photo Minute: ${item.formatLabel} (${item.purpose}) - ${item.photoCount} photos - ${item.background}`,
+          quantity: 1,
+          unitPrice: total,
+          total,
+        },
+      ],
+      totalAmount: total,
+      paidAmount: paid,
+      remainingAmount: remaining,
+      status: paid >= total ? 'Payé' : paid > 0 ? 'Partiellement payé' : 'Non payé',
+      paymentMethod: item.paymentMethod,
+      notes: item.observations || 'Prestation Photo Minute express.',
+      createdBy: currentUser.name,
+      createdByRole: currentUser.role,
+      createdAt: new Date().toISOString(),
+    };
+    setInvoices((prev) => [invoice, ...prev]);
+
+    if (paid > 0) {
+      addPayment({
+        invoiceId: invoice.id,
+        orderId: newOrder.id,
+        category: 'photo_minute' as any,
+        clientId: item.clientId,
+        clientName: item.clientName,
+        amount: paid,
+        date: item.date,
+        paymentMethod: (item.paymentMethod as PaymentMethod) || 'Espèces',
+        reference: `PAY-${num}`,
+        notes: `Règlement Photo minute ${num}`,
+        receivedBy: currentUser.name,
+        createdByRole: currentUser.role,
+      });
+    }
+  };
+
+  const updatePhotoMinuteOrder = (id: string, updates: Partial<PhotoMinuteOrder>) => {
+    setPhotoMinuteOrders((prev) =>
+      prev.map((o) => {
+        if (o.id === id) {
+          const total = updates.totalAmount !== undefined ? Number(updates.totalAmount) : o.totalAmount;
+          const paid = updates.paidAmount !== undefined ? Number(updates.paidAmount) : o.paidAmount;
+          return {
+            ...o,
+            ...updates,
+            totalAmount: total,
+            paidAmount: paid,
+            remainingAmount: Math.max(0, total - paid),
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return o;
+      })
+    );
+    addAuditLog('MAJ_PHOTO_MINUTE', 'PHOTO_MINUTE', `Mise à jour commande Photo Minute ID: ${id}`);
+  };
+
+  const deletePhotoMinuteOrder = (id: string) => {
+    setPhotoMinuteOrders((prev) => prev.filter((o) => o.id !== id));
+    addAuditLog('SUPPRESSION_PHOTO_MINUTE', 'PHOTO_MINUTE', `Suppression commande Photo Minute ID: ${id}`);
+  };
+
+  // INSCRIPTION EN LIGNE SCOLAIRE
+  const addSchoolRegistration = (
+    item: Omit<SchoolRegistration, 'id' | 'registrationNumber' | 'createdAt' | 'updatedAt' | 'remainingAmount'>
+  ) => {
+    const num = `INS-2026-${String(schoolRegistrations.length + 1).padStart(4, '0')}`;
+    const total = Number(item.totalAmount) || 0;
+    const paid = Number(item.paidAmount) || 0;
+    const remaining = Math.max(0, total - paid);
+
+    const newReg: SchoolRegistration = {
+      ...item,
+      id: `ins_${Date.now()}`,
+      registrationNumber: num,
+      totalAmount: total,
+      paidAmount: paid,
+      remainingAmount: remaining,
+      createdBy: item.createdBy || currentUser.name,
+      createdByRole: item.createdByRole || currentUser.role,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setSchoolRegistrations((prev) => [newReg, ...prev]);
+    addAuditLog('NOUVELLE_INSCRIPTION_SCOLAIRE', 'INSCRIPTION_SCOLAIRE', `Inscription ${num} enregistrée : ${item.studentName} (${item.registrationType} - ${item.schoolName})`);
+    triggerNotification('order', 'Nouvelle Inscription Scolaire', `${num} - ${item.studentName} : ${total.toLocaleString('fr-FR')} FCFA`, 'inscription_scolaire');
+
+    // Create Invoice automatically
+    const invNum = `FAC-2026-${String(invoices.length + 94).padStart(4, '0')}`;
+    const client = clients.find((c) => c.id === item.clientId);
+    const invoice: Invoice = {
+      id: `fac_${Date.now()}`,
+      invoiceNumber: invNum,
+      orderId: newReg.id,
+      category: 'inscription_scolaire' as any,
+      clientId: item.clientId,
+      clientName: item.clientName,
+      clientPhone: item.phone,
+      clientAddress: client?.address || 'Daloa',
+      date: item.date,
+      dueDate: item.date,
+      items: [
+        {
+          id: `item_fee_${Date.now()}`,
+          description: `${item.registrationType} - Élève : ${item.studentName} (Matricule: ${item.matriculeMENA || 'N/A'}) - Établissement: ${item.schoolName}`,
+          quantity: 1,
+          unitPrice: item.officialFee,
+          total: item.officialFee,
+        },
+        {
+          id: `item_serv_${Date.now()}`,
+          description: `Frais de prestation & traitement en ligne SYGEMA CI (${item.paymentOperator})`,
+          quantity: 1,
+          unitPrice: item.serviceFee,
+          total: item.serviceFee,
+        },
+      ],
+      totalAmount: total,
+      paidAmount: paid,
+      remainingAmount: remaining,
+      status: paid >= total ? 'Payé' : paid > 0 ? 'Partiellement payé' : 'Non payé',
+      paymentMethod: item.paymentOperator,
+      notes: `Réf transaction : ${item.transactionReference || 'Comptoir'} • ${item.observations || 'Inscription scolaire validée.'}`,
+      createdBy: currentUser.name,
+      createdByRole: currentUser.role,
+      createdAt: new Date().toISOString(),
+    };
+    setInvoices((prev) => [invoice, ...prev]);
+
+    if (paid > 0) {
+      addPayment({
+        invoiceId: invoice.id,
+        orderId: newReg.id,
+        category: 'inscription_scolaire' as any,
+        clientId: item.clientId,
+        clientName: item.clientName,
+        amount: paid,
+        date: item.date,
+        paymentMethod: (item.paymentOperator === 'TrésorMoney' || item.paymentOperator === 'Wave' || item.paymentOperator === 'Orange Money' || item.paymentOperator === 'MTN Mobile Money' || item.paymentOperator === 'Moov Money' ? item.paymentOperator : 'Espèces') as PaymentMethod,
+        reference: `PAY-${num}`,
+        notes: `Règlement inscription scolaire ${num} (${item.studentName})`,
+        receivedBy: currentUser.name,
+        createdByRole: currentUser.role,
+      });
+    }
+  };
+
+  const updateSchoolRegistration = (id: string, updates: Partial<SchoolRegistration>) => {
+    setSchoolRegistrations((prev) =>
+      prev.map((r) => {
+        if (r.id === id) {
+          const total = updates.totalAmount !== undefined ? Number(updates.totalAmount) : r.totalAmount;
+          const paid = updates.paidAmount !== undefined ? Number(updates.paidAmount) : r.paidAmount;
+          return {
+            ...r,
+            ...updates,
+            totalAmount: total,
+            paidAmount: paid,
+            remainingAmount: Math.max(0, total - paid),
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return r;
+      })
+    );
+    addAuditLog('MAJ_INSCRIPTION_SCOLAIRE', 'INSCRIPTION_SCOLAIRE', `Mise à jour inscription scolaire ID: ${id}`);
+  };
+
+  const deleteSchoolRegistration = (id: string) => {
+    setSchoolRegistrations((prev) => prev.filter((r) => r.id !== id));
+    addAuditLog('SUPPRESSION_INSCRIPTION_SCOLAIRE', 'INSCRIPTION_SCOLAIRE', `Suppression inscription scolaire ID: ${id}`);
+  };
+
   // UNIFIED ORDERS
   const getAllOrders = (): UnifiedOrder[] => {
     const list: UnifiedOrder[] = [];
@@ -1192,6 +1471,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createdBy: p.createdBy,
         createdByRole: p.createdByRole,
         createdAt: p.createdAt,
+      });
+    });
+
+    // Photo Minute
+    photoMinuteOrders.forEach((p) => {
+      list.push({
+        id: p.id,
+        orderNumber: p.orderNumber,
+        category: 'photo_minute',
+        categoryLabel: 'Photo Minute',
+        categoryIcon: 'Camera',
+        clientId: p.clientId,
+        clientName: p.clientName,
+        clientPhone: p.phone,
+        title: `${p.formatLabel} (${p.purpose}) - ${p.photoCount} photos`,
+        totalAmount: p.totalAmount,
+        paidAmount: p.paidAmount,
+        remainingAmount: p.remainingAmount,
+        status: p.status,
+        date: p.date,
+        deliveryDate: p.deliveryDate,
+        createdBy: p.createdBy,
+        createdByRole: p.createdByRole,
+        createdAt: p.createdAt,
+      });
+    });
+
+    // Inscription en Ligne Scolaire
+    schoolRegistrations.forEach((ins) => {
+      list.push({
+        id: ins.id,
+        orderNumber: ins.registrationNumber,
+        category: 'inscription_scolaire',
+        categoryLabel: 'Inscription en Ligne Scolaire',
+        categoryIcon: 'GraduationCap',
+        clientId: ins.clientId,
+        clientName: ins.clientName,
+        clientPhone: ins.phone,
+        title: `${ins.registrationType} - ${ins.studentName} (${ins.classLevel} - ${ins.schoolName})`,
+        totalAmount: ins.totalAmount,
+        paidAmount: ins.paidAmount,
+        remainingAmount: ins.remainingAmount,
+        status: ins.status,
+        date: ins.date,
+        deliveryDate: ins.date,
+        createdBy: ins.createdBy,
+        createdByRole: ins.createdByRole,
+        createdAt: ins.createdAt,
       });
     });
 
@@ -2195,6 +2522,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateTshirtOrder,
         deleteTshirtOrder,
         consumeStockForTshirt,
+        photoMinuteOrders,
+        addPhotoMinuteOrder,
+        updatePhotoMinuteOrder,
+        deletePhotoMinuteOrder,
+        schoolRegistrations,
+        addSchoolRegistration,
+        updateSchoolRegistration,
+        deleteSchoolRegistration,
         getAllOrders,
         quotes,
         addQuote,

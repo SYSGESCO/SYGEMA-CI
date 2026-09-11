@@ -28,6 +28,8 @@ import { UsersView } from './components/views/UsersView';
 import { AuditLogsView } from './components/views/AuditLogsView';
 import { ParametresView } from './components/views/ParametresView';
 import { CommandesView } from './components/views/CommandesView';
+import { PhotoMinuteView } from './components/views/PhotoMinuteView';
+import { InscriptionScolaireView } from './components/views/InscriptionScolaireView';
 
 const MainLayout: React.FC = () => {
   const { isAuthenticated, currentUser } = useAppStore();
@@ -81,6 +83,13 @@ const MainLayout: React.FC = () => {
         );
       case 'imprimerie':
         return <PrintOrdersView onOpenPrint={setPrintDoc} />;
+      case 'photo_minute':
+      case 'photo-minute':
+        return <PhotoMinuteView onOpenPrint={setPrintDoc} />;
+      case 'inscription_scolaire':
+      case 'inscriptions_scolaires':
+      case 'inscription-scolaire':
+        return <InscriptionScolaireView onOpenPrint={setPrintDoc} />;
       case 'maintenance':
         return <MaintenanceView onOpenPrint={setPrintDoc} />;
       case 'graphisme':

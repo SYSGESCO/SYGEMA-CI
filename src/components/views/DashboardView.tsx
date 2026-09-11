@@ -43,6 +43,8 @@ import {
   Wallet,
   Activity,
   ArrowRight,
+  Camera,
+  GraduationCap,
 } from 'lucide-react';
 import { PrintableDocType } from '../PrintableDocumentModal';
 import { LiveClock } from '../LiveClock';
@@ -63,6 +65,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     clients,
     maintenance,
     printOrders,
+    photoMinuteOrders,
+    schoolRegistrations,
     graphicProjects,
     digitalProjects,
     tshirtOrders,
@@ -209,11 +213,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Services breakdown (CA by branch)
   const printCA = printOrders.reduce((sum, p) => sum + p.totalAmount, 0);
+  const photoCA = (photoMinuteOrders || []).reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+  const schoolCA = (schoolRegistrations || []).reduce((sum, s) => sum + (s.totalAmount || 0), 0);
   const maintCA = maintenance.reduce((sum, m) => sum + m.cost, 0);
   const graphCA = graphicProjects.reduce((sum, g) => sum + g.price, 0);
   const digiCA = digitalProjects.reduce((sum, d) => sum + d.budget, 0);
   const tshCA = tshirtOrders.reduce((sum, t) => sum + t.totalAmount, 0);
-  const grandTotalCA = printCA + maintCA + graphCA + digiCA + tshCA || 1;
+  const grandTotalCA = printCA + photoCA + schoolCA + maintCA + graphCA + digiCA + tshCA || 1;
 
   return (
     <div className="space-y-6">
@@ -260,7 +266,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <TrendingUp className="w-4 h-4 text-blue-600" />
           <span>Actions Rapides Immédiates</span>
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
           <button
             id="btn-quick-order"
             type="button"
@@ -269,6 +275,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           >
             <Printer className="w-5 h-5 text-blue-600 mb-1.5 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-bold leading-tight">+ Commande</span>
+          </button>
+
+          <button
+            id="btn-quick-photo"
+            type="button"
+            onClick={() => onNavigate('photo_minute')}
+            className="flex flex-col items-center justify-center p-3 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-100/70 hover:border-amber-400 text-amber-950 transition text-center group"
+          >
+            <Camera className="w-5 h-5 text-amber-600 mb-1.5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-bold leading-tight">+ Photo minute</span>
+          </button>
+
+          <button
+            id="btn-quick-inscription"
+            type="button"
+            onClick={() => onNavigate('inscription_scolaire')}
+            className="flex flex-col items-center justify-center p-3 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/70 hover:border-emerald-400 text-emerald-950 transition text-center group"
+          >
+            <GraduationCap className="w-5 h-5 text-emerald-600 mb-1.5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-bold leading-tight">+ Inscription</span>
           </button>
 
           <button
@@ -1120,12 +1146,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* 5. BREAKDOWN OF THE 5 SERVICES OF SYGEMA CI */}
+      {/* 5. BREAKDOWN OF THE 7 SERVICES OF SYGEMA CI */}
       <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200">
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
           <div>
             <h2 className="text-base font-extrabold text-slate-900">
-              Répartition des 5 Pôles d'Activités SYGEMA CI
+              Répartition des 7 Pôles d'Activités SYGEMA CI
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Suivi d'activité et part contributive au chiffre d'affaires
@@ -1136,43 +1162,83 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3 mt-5">
           {/* Imprimerie */}
           <div
             onClick={() => onNavigate('imprimerie')}
-            className="p-4 rounded-xl border border-blue-200 bg-blue-50/40 hover:bg-blue-50 cursor-pointer transition"
+            className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/40 hover:bg-blue-50 cursor-pointer transition"
           >
             <div className="flex items-center justify-between">
               <Printer className="w-5 h-5 text-blue-600" />
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-200/60 text-blue-900">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-200/60 text-blue-900">
                 {Math.round((printCA / grandTotalCA) * 100)}%
               </span>
             </div>
-            <h3 className="font-bold text-sm text-slate-900 mt-2">
-              Imprimerie & Bureautique
+            <h3 className="font-bold text-xs sm:text-sm text-slate-900 mt-2">
+              Imprimerie
             </h3>
-            <p className="text-xs text-slate-500">{printOrders.length} commandes</p>
-            <p className="text-sm font-black text-blue-950 mt-2">
+            <p className="text-[11px] text-slate-500">{printOrders.length} commandes</p>
+            <p className="text-xs sm:text-sm font-black text-blue-950 mt-1.5">
               {formatFCFA(printCA)}
+            </p>
+          </div>
+
+          {/* Photo minute */}
+          <div
+            onClick={() => onNavigate('photo_minute')}
+            className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/40 hover:bg-amber-50 cursor-pointer transition"
+          >
+            <div className="flex items-center justify-between">
+              <Camera className="w-5 h-5 text-amber-600" />
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200/60 text-amber-950">
+                {Math.round((photoCA / grandTotalCA) * 100)}%
+              </span>
+            </div>
+            <h3 className="font-bold text-xs sm:text-sm text-slate-900 mt-2">
+              Photo Minute
+            </h3>
+            <p className="text-[11px] text-slate-500">{(photoMinuteOrders || []).length} séances</p>
+            <p className="text-xs sm:text-sm font-black text-amber-950 mt-1.5">
+              {formatFCFA(photoCA)}
+            </p>
+          </div>
+
+          {/* Inscription Scolaire */}
+          <div
+            onClick={() => onNavigate('inscription_scolaire')}
+            className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50 cursor-pointer transition"
+          >
+            <div className="flex items-center justify-between">
+              <GraduationCap className="w-5 h-5 text-emerald-600" />
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-200/60 text-emerald-950">
+                {Math.round((schoolCA / grandTotalCA) * 100)}%
+              </span>
+            </div>
+            <h3 className="font-bold text-xs sm:text-sm text-slate-900 mt-2">
+              Inscr. Scolaire
+            </h3>
+            <p className="text-[11px] text-slate-500">{(schoolRegistrations || []).length} dossiers</p>
+            <p className="text-xs sm:text-sm font-black text-emerald-950 mt-1.5">
+              {formatFCFA(schoolCA)}
             </p>
           </div>
 
           {/* Maintenance */}
           <div
             onClick={() => onNavigate('maintenance')}
-            className="p-4 rounded-xl border border-purple-200 bg-purple-50/40 hover:bg-purple-50 cursor-pointer transition"
+            className="p-3.5 rounded-xl border border-purple-200 bg-purple-50/40 hover:bg-purple-50 cursor-pointer transition"
           >
             <div className="flex items-center justify-between">
               <Wrench className="w-5 h-5 text-purple-600" />
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-200/60 text-purple-900">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-200/60 text-purple-900">
                 {Math.round((maintCA / grandTotalCA) * 100)}%
               </span>
             </div>
-            <h3 className="font-bold text-sm text-slate-900 mt-2">
-              Maintenance Informatique
+            <h3 className="font-bold text-xs sm:text-sm text-slate-900 mt-2">
+              Maintenance
             </h3>
-            <p className="text-xs text-slate-500">{maintenance.length} interventions</p>
-            <p className="text-sm font-black text-purple-950 mt-2">
+            <p className="text-[11px] text-slate-500">{maintenance.length} réparations</p>
+            <p className="text-xs sm:text-sm font-black text-purple-950 mt-1.5">
               {formatFCFA(maintCA)}
             </p>
           </div>
@@ -1180,19 +1246,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Graphisme */}
           <div
             onClick={() => onNavigate('graphisme')}
-            className="p-4 rounded-xl border border-pink-200 bg-pink-50/40 hover:bg-pink-50 cursor-pointer transition"
+            className="p-3.5 rounded-xl border border-pink-200 bg-pink-50/40 hover:bg-pink-50 cursor-pointer transition"
           >
             <div className="flex items-center justify-between">
               <Palette className="w-5 h-5 text-pink-600" />
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-200/60 text-pink-900">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-200/60 text-pink-900">
                 {Math.round((graphCA / grandTotalCA) * 100)}%
               </span>
             </div>
-            <h3 className="font-bold text-sm text-slate-900 mt-2">
-              Graphisme & Communication
+            <h3 className="font-bold text-xs sm:text-sm text-slate-900 mt-2">
+              Graphisme
             </h3>
-            <p className="text-xs text-slate-500">{graphicProjects.length} projets</p>
-            <p className="text-sm font-black text-pink-950 mt-2">
+            <p className="text-[11px] text-slate-500">{graphicProjects.length} projets</p>
+            <p className="text-xs sm:text-sm font-black text-pink-950 mt-1.5">
               {formatFCFA(graphCA)}
             </p>
           </div>
@@ -1200,19 +1266,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Solutions Numériques */}
           <div
             onClick={() => onNavigate('solutions_numeriques')}
-            className="p-4 rounded-xl border border-cyan-200 bg-cyan-50/40 hover:bg-cyan-50 cursor-pointer transition"
+            className="p-3.5 rounded-xl border border-cyan-200 bg-cyan-50/40 hover:bg-cyan-50 cursor-pointer transition"
           >
             <div className="flex items-center justify-between">
               <Laptop className="w-5 h-5 text-cyan-600" />
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-200/60 text-cyan-900">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-200/60 text-cyan-900">
                 {Math.round((digiCA / grandTotalCA) * 100)}%
               </span>
             </div>
-            <h3 className="font-bold text-sm text-slate-900 mt-2">
-              Solutions Numériques
+            <h3 className="font-bold text-xs sm:text-sm text-slate-900 mt-2">
+              Numérique
             </h3>
-            <p className="text-xs text-slate-500">{digitalProjects.length} projets</p>
-            <p className="text-sm font-black text-cyan-950 mt-2">
+            <p className="text-[11px] text-slate-500">{digitalProjects.length} projets</p>
+            <p className="text-xs sm:text-sm font-black text-cyan-950 mt-1.5">
               {formatFCFA(digiCA)}
             </p>
           </div>
@@ -1220,19 +1286,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Impression Tee-shirt */}
           <div
             onClick={() => onNavigate('teeshirt')}
-            className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 hover:bg-amber-50 cursor-pointer transition"
+            className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/40 hover:bg-amber-50 cursor-pointer transition"
           >
             <div className="flex items-center justify-between">
               <Shirt className="w-5 h-5 text-amber-600" />
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-200/60 text-amber-900">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200/60 text-amber-900">
                 {Math.round((tshCA / grandTotalCA) * 100)}%
               </span>
             </div>
-            <h3 className="font-bold text-sm text-slate-900 mt-2">
-              Impression Tee-shirt
+            <h3 className="font-bold text-xs sm:text-sm text-slate-900 mt-2">
+              Tee-shirt
             </h3>
-            <p className="text-xs text-slate-500">{tshirtOrders.length} commandes</p>
-            <p className="text-sm font-black text-amber-950 mt-2">
+            <p className="text-[11px] text-slate-500">{tshirtOrders.length} commandes</p>
+            <p className="text-xs sm:text-sm font-black text-amber-950 mt-1.5">
               {formatFCFA(tshCA)}
             </p>
           </div>

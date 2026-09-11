@@ -196,6 +196,8 @@ export interface TshirtOrder {
 // Global Order view
 export type ServiceCategory =
   | 'imprimerie'
+  | 'photo_minute'
+  | 'inscription_scolaire'
   | 'maintenance'
   | 'graphisme'
   | 'solutions_numeriques'
@@ -204,11 +206,122 @@ export type ServiceCategory =
 
 export type BranchType =
   | 'Imprimerie & Bureautique'
+  | 'Photo Minute'
+  | 'Inscription en Ligne Scolaire'
   | 'Vente Fournitures Informatiques'
   | 'Maintenance Informatique'
   | 'Graphisme & Communication'
   | 'Solutions Numériques'
   | 'Impression Tee-shirt';
+
+// 6. Photo Minute (Prise de vue instantanée & Tirage immédiat)
+export type PhotoMinuteFormat =
+  | '4_photos'
+  | '8_photos'
+  | '12_photos'
+  | 'numerique_seul'
+  | 'pack_complet'
+  | 'autre';
+
+export type PhotoMinutePurpose =
+  | 'Passeport / Visa'
+  | 'Carte Nationale d\'Identité (CNI)'
+  | 'Concours administratifs (CAFOP, ENS, INFAS, Police)'
+  | 'Carte Scolaire / Étudiant'
+  | 'Dossier d\'embauche / Badge'
+  | 'Autre';
+
+export type PhotoMinuteBackground =
+  | 'Fond Blanc (Réglementaire)'
+  | 'Fond Bleu ciel'
+  | 'Fond Rouge'
+  | 'Autre';
+
+export type PhotoMinuteStatus = 'Prise de vue' | 'En tirage' | 'Prêt' | 'Livré';
+
+export interface PhotoMinuteOrder {
+  id: string;
+  orderNumber: string; // PHO-2026-XXXX
+  clientId: string;
+  clientName: string;
+  phone: string;
+  format: PhotoMinuteFormat;
+  formatLabel: string;
+  purpose: PhotoMinutePurpose;
+  background: PhotoMinuteBackground;
+  photoCount: number;
+  sendDigital: boolean;
+  whatsappOrEmail?: string;
+  unitPrice: number;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  paymentMethod: string;
+  status: PhotoMinuteStatus;
+  date: string;
+  deliveryDate: string;
+  observations: string;
+  createdBy?: string;
+  createdByRole?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 7. Inscription en Ligne Scolaire & Universitaire
+export type SchoolRegistrationType =
+  | 'Inscription Scolaire MENA (Collège & Lycée)'
+  | 'Inscription Primaire / Maternelle'
+  | 'Examen BEPC'
+  | 'Examen BAC'
+  | 'Examen CEPE'
+  | 'Université UJLoG Daloa / Universités Publiques CI'
+  | 'Université Privée / Grande École'
+  | 'Orientation & Réaffectation en ligne'
+  | 'Concours Pédagogique (CAFOP, ENS...)';
+
+export type SchoolRegistrationStatus =
+  | 'Dossier reçu'
+  | 'Paiement en cours'
+  | 'Inscrit avec succès'
+  | 'Fiche imprimée & Remise';
+
+export type SchoolRegistrationPaymentOperator =
+  | 'TrésorMoney'
+  | 'Wave'
+  | 'Orange Money'
+  | 'MTN Mobile Money'
+  | 'Moov Money'
+  | 'Espèces comptoir';
+
+export interface SchoolRegistration {
+  id: string;
+  registrationNumber: string; // INS-2026-XXXX
+  clientId: string;
+  clientName: string; // Parent ou élève
+  phone: string;
+  studentName: string; // Nom & Prénoms de l'élève
+  studentBirthDate?: string;
+  studentGender?: 'M' | 'F';
+  matriculeMENA: string; // Matricule élève MENA / N° dossier
+  registrationType: SchoolRegistrationType;
+  schoolName: string; // Établissement
+  classLevel: string; // Classe / Niveau
+  academicYear: string; // Ex: 2026-2027
+  officialFee: number; // Frais réels officiels
+  serviceFee: number; // Frais prestation cyber SYGEMA CI
+  totalAmount: number; // total = officialFee + serviceFee
+  paidAmount: number;
+  remainingAmount: number;
+  paymentOperator: SchoolRegistrationPaymentOperator;
+  transactionReference?: string; // N° transaction TrésorPay ou Mobile Money
+  status: SchoolRegistrationStatus;
+  date: string;
+  observations: string;
+  createdBy?: string;
+  createdByRole?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // Vente de Fournitures & Consommables Informatiques
 export interface SupplySaleItem {

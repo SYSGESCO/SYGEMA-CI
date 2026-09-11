@@ -27,6 +27,8 @@ import {
   LogOut,
   Shield,
   ShoppingBag,
+  Camera,
+  GraduationCap,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -44,7 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen,
   onCloseMobile,
 }) => {
-  const { products, charges, maintenance, currentUser, logout } = useAppStore();
+  const { products, charges, maintenance, photoMinuteOrders, schoolRegistrations, currentUser, logout } = useAppStore();
   const isMobile = isOpenMobile ?? isMobileOpen ?? false;
 
   const lowStockCount = products.filter(
@@ -59,14 +61,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
     (m) => m.status === 'Reçu' || m.status === 'En diagnostic' || m.status === 'En cours'
   ).length;
 
+  const pendingPhotoMinuteCount = (photoMinuteOrders || []).filter(
+    (p) => p.status === 'Prise de vue' || p.status === 'En tirage'
+  ).length;
+
+  const pendingSchoolRegCount = (schoolRegistrations || []).filter(
+    (s) => s.status === 'Dossier reçu' || s.status === 'Paiement en cours'
+  ).length;
+
   const isGerant = currentUser?.role === 'Gérant';
 
   const rawMenuItems = [
     { id: 'dashboard', label: isGerant ? 'Tableau de bord Ventes' : 'Tableau de bord', icon: LayoutDashboard, category: 'Général' },
     { id: 'clients', label: 'Clients', icon: Users, category: 'Général' },
 
-    // The 5 Core Services of SYGEMA CI
+    // Services of SYGEMA CI
     { id: 'imprimerie', label: 'Imprimerie & Bureautique', icon: Printer, category: 'Services SYGEMA CI' },
+    { id: 'photo_minute', label: 'Photo minute', icon: Camera, category: 'Services SYGEMA CI', badge: pendingPhotoMinuteCount > 0 ? pendingPhotoMinuteCount : undefined },
+    { id: 'inscription_scolaire', label: 'Inscription en ligne scolaire', icon: GraduationCap, category: 'Services SYGEMA CI', badge: pendingSchoolRegCount > 0 ? pendingSchoolRegCount : undefined },
     { id: 'maintenance', label: 'Maintenance informatique', icon: Wrench, category: 'Services SYGEMA CI', badge: ongoingMaintenanceCount > 0 ? ongoingMaintenanceCount : undefined },
     { id: 'graphisme', label: 'Graphisme & Communication', icon: Palette, category: 'Services SYGEMA CI' },
     { id: 'solutions_numeriques', label: 'Solutions numériques', icon: Laptop, category: 'Services SYGEMA CI' },
