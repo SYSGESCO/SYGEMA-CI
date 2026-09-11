@@ -35,6 +35,7 @@ import {
   Receipt,
 } from 'lucide-react';
 import { PrintableDocType } from '../PrintableDocumentModal';
+import { LiveClock } from '../LiveClock';
 
 interface GerantDashboardViewProps {
   onNavigate: (view: string) => void;
@@ -193,23 +194,26 @@ export const GerantDashboardView: React.FC<GerantDashboardViewProps> = ({
             </p>
           </div>
 
-          {/* Manager Access Badge */}
-          <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 text-xs space-y-1.5 shrink-0">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-slate-400">Rôle Actif :</span>
-              <span className="font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded">
-                Gérant des Ventes
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-slate-400">Périmètre :</span>
-              <span className="text-slate-200 font-semibold">5 Services & Caisse</span>
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-slate-400">Encaissements Caisse :</span>
-              <span className="font-mono font-bold text-emerald-400">
-                {formatFCFA(cashInfo.theoretical)}
-              </span>
+          {/* Manager Access Badge & Live Clock */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0">
+            <LiveClock variant="banner" className="bg-slate-950/70 border-slate-700" />
+            <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 text-xs space-y-1.5 shrink-0">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-slate-400">Rôle Actif :</span>
+                <span className="font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded">
+                  Gérant des Ventes
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-slate-400">Périmètre :</span>
+                <span className="text-slate-200 font-semibold">5 Services & Caisse</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-slate-400">Encaissements Caisse :</span>
+                <span className="font-mono font-bold text-emerald-400">
+                  {formatFCFA(cashInfo.theoretical)}
+                </span>
+              </div>
             </div>
           </div>
         </div>

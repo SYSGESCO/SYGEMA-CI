@@ -13,8 +13,12 @@ import {
   AlertTriangle,
   LogOut,
   ShoppingBag,
+  RefreshCw,
+  Database,
+  CloudCheck,
 } from 'lucide-react';
 import { UserRole } from '../types';
+import { LiveClock } from './LiveClock';
 
 interface NavbarProps {
   onOpenMobileMenu?: () => void;
@@ -39,7 +43,18 @@ export const Navbar: React.FC<NavbarProps> = ({
     markNotificationRead,
     clearNotifications,
     logout,
+    syncStatus,
+    lastSyncTime,
+    forceSyncWithServer,
   } = useAppStore();
+
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
+
+  const handleManualSync = async () => {
+    setIsManualSyncing(true);
+    await forceSyncWithServer();
+    setTimeout(() => setIsManualSyncing(false), 800);
+  };
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -133,8 +148,45 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </div>
 
-        {/* Right Section: Contacts, Notifications & User Switcher */}
+        {/* Right Section: Contacts, Clock, Sync, Notifications & User Switcher */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Live Platform Clock with Date */}
+          <LiveClock variant="navbar" />
+
+          {/* Compact Clock for Mobile */}
+          <LiveClock variant="compact" className="flex md:hidden" />
+
+          {/* Server Sync Indicator & Manual Sync Button */}
+          <button
+            id="btn-server-sync"
+            type="button"
+            onClick={handleManualSync}
+            disabled={isManualSyncing}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition ${
+              syncStatus === 'synced'
+                ? 'bg-emerald-950/70 border-emerald-600/60 text-emerald-300 hover:bg-emerald-900/80'
+                : syncStatus === 'syncing' || isManualSyncing
+                ? 'bg-blue-950/70 border-blue-500/60 text-blue-300 animate-pulse'
+                : 'bg-amber-950/70 border-amber-600/60 text-amber-300 hover:bg-amber-900/80'
+            }`}
+            title={`Base de données SYGEMA CI sauvegardée. ${
+              lastSyncTime ? `Dernière synchro : ${lastSyncTime}` : ''
+            }. Cliquez pour forcer la synchronisation.`}
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${
+                syncStatus === 'syncing' || isManualSyncing ? 'animate-spin text-blue-400' : 'text-emerald-400'
+              }`}
+            />
+            <span className="hidden lg:inline text-[11px]">
+              {syncStatus === 'syncing' || isManualSyncing
+                ? 'Synchro...'
+                : syncStatus === 'synced'
+                ? 'Serveur OK'
+                : 'Hors ligne'}
+            </span>
+          </button>
+
           {/* Mobile search button */}
           <button
             id="btn-search-mobile"

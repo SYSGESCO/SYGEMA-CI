@@ -45,6 +45,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { PrintableDocType } from '../PrintableDocumentModal';
+import { LiveClock } from '../LiveClock';
 
 interface DashboardViewProps {
   onNavigate: (view: string) => void;
@@ -80,6 +81,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [activityOriginFilter, setActivityOriginFilter] = useState<'ALL' | 'GERANT' | 'ADMIN'>('ALL');
+  const [gerantViewTab, setGerantViewTab] = useState<'ALL' | 'ORDERS' | 'PAYMENTS' | 'QUOTES'>('ALL');
 
   const allOrders = getAllOrders();
 
@@ -126,7 +128,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Gérant specific statistics (Saisies et activités du Gérant)
   const isGerantEntity = (createdBy?: string, createdByRole?: string) => {
-    return createdByRole === 'Gérant' || (createdBy && createdBy.toLowerCase().includes('gérant'));
+    if (!createdByRole && !createdBy) return false;
+    const role = (createdByRole || '').toLowerCase();
+    const name = (createdBy || '').toLowerCase();
+    return (
+      role.includes('gérant') ||
+      role.includes('gerant') ||
+      name.includes('gérant') ||
+      name.includes('gerant') ||
+      name.includes('comptoir')
+    );
   };
 
   const gerantOrders = allOrders.filter((o) => isGerantEntity(o.createdBy, o.createdByRole));
@@ -229,12 +240,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </p>
         </div>
 
-        {/* Quick Contact & WhatsApp Pill */}
-        <div className="flex flex-wrap items-center gap-3">
+        {/* Clock & Action Buttons */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <LiveClock variant="banner" className="border-blue-700/60 bg-blue-950/60 shadow-md" />
           <button
             type="button"
             onClick={() => setOrderModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs sm:text-sm shadow-md transition transform hover:-translate-y-0.5"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs sm:text-sm shadow-md transition transform hover:-translate-y-0.5 shrink-0"
           >
             <PlusCircle className="w-4 h-4" />
             <span>+ Nouvelle Commande</span>
@@ -748,6 +760,257 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <p className="text-[10px] text-purple-700 mt-0.5">
               Clients enregistrés
             </p>
+          </div>
+        </div>
+
+        {/* Live Records Table for Gérant's entries */}
+        <div className="mt-5 pt-5 border-t border-amber-200/70">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <div>
+              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-amber-600" />
+                <span>Journal des Saisies & Encaissements effectués par le Gérant</span>
+              </h3>
+              <p className="text-xs text-slate-500">
+                Toutes les commandes, règlements et devis enregistrés au comptoir ou sur le terrain.
+              </p>
+            </div>
+
+            {/* Sub-tabs for Gérant records */}
+            <div className="flex flex-wrap items-center gap-1 bg-amber-100/60 p-1 rounded-xl border border-amber-200">
+              <button
+                type="button"
+                onClick={() => setGerantViewTab('ALL')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                  gerantViewTab === 'ALL'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs'
+                    : 'text-slate-700 hover:text-slate-950'
+                }`}
+              >
+                Tout ({gerantOrders.length + gerantPayments.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setGerantViewTab('ORDERS')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                  gerantViewTab === 'ORDERS'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs'
+                    : 'text-slate-700 hover:text-slate-950'
+                }`}
+              >
+                Commandes ({gerantOrders.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setGerantViewTab('PAYMENTS')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                  gerantViewTab === 'PAYMENTS'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs'
+                    : 'text-slate-700 hover:text-slate-950'
+                }`}
+              >
+                Encaissements ({gerantPayments.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setGerantViewTab('QUOTES')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                  gerantViewTab === 'QUOTES'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs'
+                    : 'text-slate-700 hover:text-slate-950'
+                }`}
+              >
+                Devis ({gerantQuotes.length})
+              </button>
+            </div>
+          </div>
+
+          {/* Records Display */}
+          <div className="bg-white rounded-xl border border-amber-200 overflow-hidden shadow-xs">
+            {gerantOrders.length === 0 && gerantPayments.length === 0 && gerantQuotes.length === 0 ? (
+              <div className="p-8 text-center text-slate-500">
+                <ShoppingBag className="w-10 h-10 mx-auto text-amber-300 mb-2" />
+                <p className="font-semibold text-slate-700">Aucune donnée du Gérant pour le moment</p>
+                <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                  Dès que le Gérant enregistre une commande, valide un encaissement ou édite un devis, les informations apparaissent instantanément ici sur votre tableau de bord.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-amber-50/80 text-slate-700 uppercase font-bold text-[10px] tracking-wider border-b border-amber-200">
+                    <tr>
+                      <th className="px-3.5 py-2.5">Date & Heure</th>
+                      <th className="px-3.5 py-2.5">Type / Référence</th>
+                      <th className="px-3.5 py-2.5">Client & Contact</th>
+                      <th className="px-3.5 py-2.5">Opérateur</th>
+                      <th className="px-3.5 py-2.5 text-right">Montant</th>
+                      <th className="px-3.5 py-2.5 text-right">Acompte / Payé</th>
+                      <th className="px-3.5 py-2.5 text-right">Reste Dû</th>
+                      <th className="px-3.5 py-2.5 text-center">Statut</th>
+                      <th className="px-3.5 py-2.5 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {/* 1. Gérant Orders */}
+                    {(gerantViewTab === 'ALL' || gerantViewTab === 'ORDERS') &&
+                      gerantOrders.map((ord) => (
+                        <tr key={`ord-${ord.id}`} className="hover:bg-amber-50/40 transition">
+                          <td className="px-3.5 py-2.5 text-slate-600 whitespace-nowrap">
+                            {formatDateFr(ord.date || ord.createdAt)}
+                          </td>
+                          <td className="px-3.5 py-2.5">
+                            <div className="font-bold text-slate-900">{ord.ref}</div>
+                            <span className="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200">
+                              {ord.serviceType}
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-2.5">
+                            <div className="font-semibold text-slate-800">{ord.clientName}</div>
+                            {ord.clientPhone && (
+                              <div className="text-[10px] text-slate-500 font-mono">{ord.clientPhone}</div>
+                            )}
+                          </td>
+                          <td className="px-3.5 py-2.5 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                              <ShoppingBag className="w-3 h-3 text-amber-600" />
+                              {ord.createdBy || 'Gérant'}
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono font-bold text-slate-900">
+                            {formatFCFA(ord.totalAmount)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono font-semibold text-emerald-700">
+                            {formatFCFA(ord.paidAmount)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono font-bold text-amber-600">
+                            {formatFCFA(ord.remainingAmount)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-center">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                ord.status === 'Terminé' || ord.status === 'Livré'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : ord.status === 'En cours'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {ord.status}
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-2.5 text-center">
+                            <button
+                              type="button"
+                              onClick={() => onNavigate('commandes')}
+                              className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-medium transition"
+                            >
+                              Voir
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+
+                    {/* 2. Gérant Payments */}
+                    {(gerantViewTab === 'ALL' || gerantViewTab === 'PAYMENTS') &&
+                      gerantPayments.map((pay) => (
+                        <tr key={`pay-${pay.id}`} className="hover:bg-emerald-50/40 transition bg-emerald-50/15">
+                          <td className="px-3.5 py-2.5 text-slate-600 whitespace-nowrap">
+                            {formatDateFr(pay.date || pay.createdAt)}
+                          </td>
+                          <td className="px-3.5 py-2.5">
+                            <div className="font-bold text-emerald-900">{pay.ref}</div>
+                            <span className="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-200">
+                              Règlement Encaissé
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-2.5">
+                            <div className="font-semibold text-slate-800">{pay.clientName || 'Client Comptoir'}</div>
+                            <div className="text-[10px] text-slate-500">Mode : {pay.paymentMethod}</div>
+                          </td>
+                          <td className="px-3.5 py-2.5 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                              <Coins className="w-3 h-3 text-emerald-600" />
+                              {pay.receivedBy || 'Gérant'}
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono font-bold text-emerald-700">
+                            {formatFCFA(pay.amount)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono font-bold text-emerald-700">
+                            {formatFCFA(pay.amount)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono text-slate-400">
+                            0 F
+                          </td>
+                          <td className="px-3.5 py-2.5 text-center">
+                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                              Encaissé
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-2.5 text-center">
+                            <button
+                              type="button"
+                              onClick={() => onNavigate('comptabilite')}
+                              className="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[11px] font-medium transition"
+                            >
+                              Reçu
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+
+                    {/* 3. Gérant Quotes */}
+                    {(gerantViewTab === 'ALL' || gerantViewTab === 'QUOTES') &&
+                      gerantQuotes.map((q) => (
+                        <tr key={`q-${q.id}`} className="hover:bg-indigo-50/40 transition">
+                          <td className="px-3.5 py-2.5 text-slate-600 whitespace-nowrap">
+                            {formatDateFr(q.date || q.createdAt)}
+                          </td>
+                          <td className="px-3.5 py-2.5">
+                            <div className="font-bold text-indigo-900">{q.ref}</div>
+                            <span className="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-900 border border-indigo-200">
+                              Devis Proforma
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-2.5">
+                            <div className="font-semibold text-slate-800">{q.clientName}</div>
+                          </td>
+                          <td className="px-3.5 py-2.5 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                              <FileText className="w-3 h-3 text-indigo-600" />
+                              {q.createdBy || 'Gérant'}
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono font-bold text-indigo-700">
+                            {formatFCFA(q.totalAmount)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono text-slate-400">
+                            -
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono text-slate-400">
+                            -
+                          </td>
+                          <td className="px-3.5 py-2.5 text-center">
+                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800">
+                              {q.status}
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-2.5 text-center">
+                            <button
+                              type="button"
+                              onClick={() => onNavigate('devis')}
+                              className="px-2 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 rounded text-[11px] font-medium transition"
+                            >
+                              Voir
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -481,6 +481,7 @@ export type StockMovementReason =
   | 'Achat fournisseur'
   | 'Retour'
   | 'Ajustement positif'
+  | 'Vente client'
   | 'Utilisation pour une commande'
   | 'Produit utilisé pour impression'
   | 'Produit utilisé pour tee-shirt'

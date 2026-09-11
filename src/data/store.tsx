@@ -189,6 +189,11 @@ interface AppContextType {
 
   // Reset demo data
   resetAllData: () => void;
+
+  // Real-time server sync
+  syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
+  lastSyncTime: string | null;
+  forceSyncWithServer: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -364,34 +369,165 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : initialAuditLogs;
   });
 
-  // Save to localStorage
+  // Server sync states
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('syncing');
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+
+  // Helper to build full data snapshot
+  const buildCurrentSnapshot = () => ({
+    company,
+    users,
+    clients,
+    maintenance,
+    printOrders,
+    graphicProjects,
+    digitalProjects,
+    tshirtOrders,
+    quotes,
+    invoices,
+    payments,
+    expenses,
+    charges,
+    contingencies,
+    suppliers,
+    products,
+    supplySales,
+    stockMovements,
+    purchaseOrders,
+    cashMovements,
+    cashRegisterCloses,
+    notifications,
+    auditLogs,
+  });
+
+  // Hydrate store from server data
+  const applyServerData = (d: any) => {
+    if (!d) return;
+    if (d.company) setCompany(d.company);
+    if (Array.isArray(d.users)) setUsers(d.users);
+    if (Array.isArray(d.clients)) setClients(d.clients);
+    if (Array.isArray(d.maintenance)) setMaintenance(d.maintenance);
+    if (Array.isArray(d.printOrders)) setPrintOrders(d.printOrders);
+    if (Array.isArray(d.graphicProjects)) setGraphicProjects(d.graphicProjects);
+    if (Array.isArray(d.digitalProjects)) setDigitalProjects(d.digitalProjects);
+    if (Array.isArray(d.tshirtOrders)) setTshirtOrders(d.tshirtOrders);
+    if (Array.isArray(d.quotes)) setQuotes(d.quotes);
+    if (Array.isArray(d.invoices)) setInvoices(d.invoices);
+    if (Array.isArray(d.payments)) setPayments(d.payments);
+    if (Array.isArray(d.expenses)) setExpenses(d.expenses);
+    if (Array.isArray(d.charges)) setCharges(d.charges);
+    if (Array.isArray(d.contingencies)) setContingencies(d.contingencies);
+    if (Array.isArray(d.suppliers)) setSuppliers(d.suppliers);
+    if (Array.isArray(d.products)) setProducts(d.products);
+    if (Array.isArray(d.supplySales)) setSupplySales(d.supplySales);
+    if (Array.isArray(d.stockMovements)) setStockMovements(d.stockMovements);
+    if (Array.isArray(d.purchaseOrders)) setPurchaseOrders(d.purchaseOrders);
+    if (Array.isArray(d.cashMovements)) setCashMovements(d.cashMovements);
+    if (Array.isArray(d.cashRegisterCloses)) setCashRegisterCloses(d.cashRegisterCloses);
+    if (Array.isArray(d.notifications)) setNotifications(d.notifications);
+    if (Array.isArray(d.auditLogs)) setAuditLogs(d.auditLogs);
+  };
+
+  // Push snapshot to server
+  const pushToServer = async (snapshotData: any) => {
+    try {
+      const res = await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: snapshotData }),
+      });
+      if (res.ok) {
+        setSyncStatus('synced');
+        setLastSyncTime(new Date().toLocaleTimeString('fr-FR'));
+      } else {
+        setSyncStatus('error');
+      }
+    } catch (e) {
+      console.warn('Erreur de synchronisation serveur:', e);
+      setSyncStatus('offline');
+    }
+  };
+
+  // Manual or automatic pull from server
+  const forceSyncWithServer = async () => {
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch('/api/data');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          applyServerData(json.data);
+          setSyncStatus('synced');
+          setLastSyncTime(new Date().toLocaleTimeString('fr-FR'));
+        } else {
+          // If server empty, initialize it with current state
+          await pushToServer(buildCurrentSnapshot());
+        }
+      } else {
+        setSyncStatus('error');
+      }
+    } catch (e) {
+      setSyncStatus('offline');
+    }
+  };
+
+  // Initial Load & Server Connection
   useEffect(() => {
-    // Nettoyage automatique des anciennes données pour garantir la stricte remise à zéro
-    if (!localStorage.getItem('sygema_ci_erp_v4_strict_zero_init')) {
-      localStorage.clear();
-      localStorage.setItem('sygema_ci_erp_v4_strict_zero_init', 'true');
-      resetAllData();
-    }
+    const initData = async () => {
+      try {
+        setSyncStatus('syncing');
+        const res = await fetch('/api/data');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data) {
+            applyServerData(json.data);
+            setSyncStatus('synced');
+            setLastSyncTime(new Date().toLocaleTimeString('fr-FR'));
+          } else {
+            // First time running, push local data to server
+            await pushToServer(buildCurrentSnapshot());
+          }
+        } else {
+          setSyncStatus('offline');
+        }
+      } catch (err) {
+        setSyncStatus('offline');
+      } finally {
+        setLoaded(true);
+      }
+    };
 
-    // Remise à zéro spécifique des dépenses demandée par l'utilisateur
-    if (!localStorage.getItem('sygema_ci_expenses_zero_v1')) {
-      localStorage.setItem('sygema_ci_expenses_zero_v1', 'true');
-      localStorage.removeItem(`${STORAGE_KEY}_expenses`);
-      localStorage.removeItem(`${STORAGE_KEY}_charges`);
-      localStorage.removeItem(`${STORAGE_KEY}_contingencies`);
-      setExpenses([]);
-      setCharges([]);
-      setContingencies([]);
-      setCashMovements((prev) =>
-        prev.filter(
-          (m) => m.source !== 'DEPENSE' && m.source !== 'CHARGE' && m.source !== 'IMPREVU'
-        )
-      );
-    }
+    initData();
 
-    setLoaded(true);
+    // Background polling every 4 seconds to sync any edits from other users (e.g. Gérant)
+    const pollInterval = setInterval(() => {
+      fetch('/api/data')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((json) => {
+          if (json && json.success && json.data) {
+            applyServerData(json.data);
+            setSyncStatus('synced');
+            setLastSyncTime(new Date().toLocaleTimeString('fr-FR'));
+          }
+        })
+        .catch(() => {
+          setSyncStatus('offline');
+        });
+    }, 4000);
+
+    // Also sync on window focus
+    const onFocus = () => {
+      forceSyncWithServer();
+    };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
+  // Save to localStorage & sync to server on state updates
   useEffect(() => {
     if (!loaded) return;
     try {
@@ -418,6 +554,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem(`${STORAGE_KEY}_notifications`, JSON.stringify(notifications));
       localStorage.setItem(`${STORAGE_KEY}_auditLogs`, JSON.stringify(auditLogs));
       localStorage.setItem(`${STORAGE_KEY}_supplySales`, JSON.stringify(supplySales));
+
+      // Push to server (debounced)
+      const timer = setTimeout(() => {
+        pushToServer(buildCurrentSnapshot());
+      }, 500);
+
+      return () => clearTimeout(timer);
     } catch (e) {
       console.warn('Erreur de sauvegarde locale', e);
     }
@@ -2104,6 +2247,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         auditLogs,
         addAuditLog,
         resetAllData,
+        syncStatus,
+        lastSyncTime,
+        forceSyncWithServer,
       }}
     >
       {children}
