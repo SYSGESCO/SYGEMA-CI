@@ -169,6 +169,8 @@ interface AppContextType {
   purchaseOrders: PurchaseOrder[];
   addPurchaseOrder: (po: Omit<PurchaseOrder, 'id' | 'purchaseNumber' | 'createdAt' | 'remainingAmount'>) => void;
   receivePurchaseOrder: (poId: string) => void;
+  deletePurchaseOrder?: (poId: string) => void;
+  resetStocksAndPurchases: (options?: { resetStockOnly?: boolean; clearAllProducts?: boolean }) => void;
 
   // Vente de Fournitures Informatiques & Consommables
   supplySales: SupplySale[];
@@ -341,7 +343,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [products, setProducts] = useState<Product[]>(() => {
+    const isZeroed = localStorage.getItem('sygema_ci_stocks_zero_v1');
     const saved = localStorage.getItem(`${STORAGE_KEY}_products`);
+    if (!isZeroed) {
+      localStorage.setItem('sygema_ci_stocks_zero_v1', 'true');
+      localStorage.removeItem(`${STORAGE_KEY}_stockMovements`);
+      localStorage.removeItem(`${STORAGE_KEY}_purchaseOrders`);
+      localStorage.removeItem(`${STORAGE_KEY}_supplySales`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const zeroed = parsed.map((p: Product) => ({ ...p, currentStock: 0 }));
+            localStorage.setItem(`${STORAGE_KEY}_products`, JSON.stringify(zeroed));
+            return zeroed;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+      const zeroedInitial = initialProducts.map((p) => ({ ...p, currentStock: 0 }));
+      localStorage.setItem(`${STORAGE_KEY}_products`, JSON.stringify(zeroedInitial));
+      return zeroedInitial;
+    }
+
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -350,22 +375,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // ignore
       }
     }
-    return initialProducts;
+    return initialProducts.map((p) => ({ ...p, currentStock: 0 }));
   });
 
   const [supplySales, setSupplySales] = useState<SupplySale[]>(() => {
+    if (!localStorage.getItem('sygema_ci_stocks_zero_v1')) {
+      return [];
+    }
     const saved = localStorage.getItem(`${STORAGE_KEY}_supplySales`);
-    return saved ? JSON.parse(saved) : initialSupplySales;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [stockMovements, setStockMovements] = useState<StockMovement[]>(() => {
+    if (!localStorage.getItem('sygema_ci_stocks_zero_v1')) {
+      return [];
+    }
     const saved = localStorage.getItem(`${STORAGE_KEY}_stockMovements`);
-    return saved ? JSON.parse(saved) : initialStockMovements;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => {
+    if (!localStorage.getItem('sygema_ci_stocks_zero_v1')) {
+      return [];
+    }
     const saved = localStorage.getItem(`${STORAGE_KEY}_purchaseOrders`);
-    return saved ? JSON.parse(saved) : initialPurchaseOrders;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [cashMovements, setCashMovements] = useState<CashMovement[]>(() => {
@@ -2268,6 +2302,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerNotification('stock', 'Réception commande fournisseur', `Le bon ${po.purchaseNumber} a été réceptionné. Les stocks ont été incrémentés.`, 'stocks');
   };
 
+  const deletePurchaseOrder = (poId: string) => {
+    setPurchaseOrders((prev) => prev.filter((p) => p.id !== poId));
+    addAuditLog('SUPPRESSION_ACHAT', 'ACHATS', `Suppression commande fournisseur ID: ${poId}`);
+  };
+
+  const resetStocksAndPurchases = (options?: { resetStockOnly?: boolean; clearAllProducts?: boolean }) => {
+    if (options?.clearAllProducts) {
+      setProducts([]);
+      localStorage.setItem(`${STORAGE_KEY}_products`, JSON.stringify([]));
+    } else {
+      setProducts((prev) => {
+        const zeroed = prev.map((p) => ({ ...p, currentStock: 0 }));
+        localStorage.setItem(`${STORAGE_KEY}_products`, JSON.stringify(zeroed));
+        return zeroed;
+      });
+    }
+
+    setStockMovements([]);
+    setPurchaseOrders([]);
+    setSupplySales([]);
+
+    localStorage.removeItem(`${STORAGE_KEY}_stockMovements`);
+    localStorage.removeItem(`${STORAGE_KEY}_purchaseOrders`);
+    localStorage.removeItem(`${STORAGE_KEY}_supplySales`);
+    localStorage.setItem('sygema_ci_stocks_zero_v1', 'true');
+
+    addAuditLog(
+      'REMISE_A_ZERO',
+      'STOCKS_ACHATS',
+      options?.clearAllProducts
+        ? 'Remise à zéro complète des stocks, achats et suppression des articles du catalogue'
+        : 'Remise à zéro des quantités en stock (0 unité) et effacement de tous les historiques d\'achats et mouvements'
+    );
+
+    triggerNotification(
+      'stock',
+      'Remise à zéro effectuée',
+      'Les données de la section stocks et achats ont été remises à zéro avec succès.',
+      'stocks'
+    );
+  };
+
   // CAISSE
   const getCashBalance = () => {
     let inflows = 0;
@@ -2567,6 +2643,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         purchaseOrders,
         addPurchaseOrder,
         receivePurchaseOrder,
+        deletePurchaseOrder,
+        resetStocksAndPurchases,
         cashMovements,
         cashRegisterCloses,
         closeCashRegister,

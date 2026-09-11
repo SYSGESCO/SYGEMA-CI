@@ -117,9 +117,11 @@ const MainLayout: React.FC = () => {
       case 'paiements':
         return <FacturationView onOpenPrint={setPrintDoc} initialTab="paiements" />;
       case 'stocks':
+        return <StockView initialTab="stocks" />;
       case 'produits':
+        return <StockView initialTab="produits" />;
       case 'achats':
-        return <StockView />;
+        return <StockView initialTab="achats" />;
       case 'depenses':
       case 'charges':
       case 'imprevus':
