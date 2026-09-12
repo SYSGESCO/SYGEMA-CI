@@ -169,7 +169,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'bg-blue-950/70 border-blue-500/60 text-blue-300 animate-pulse'
                 : 'bg-amber-950/70 border-amber-600/60 text-amber-300 hover:bg-amber-900/80'
             }`}
-            title={`Base de données SYGEMA CI sauvegardée. ${
+            title={`Base de données Cloud SYGEMA CI synchronisée en temps réel sur PC et Téléphone. ${
               lastSyncTime ? `Dernière synchro : ${lastSyncTime}` : ''
             }. Cliquez pour forcer la synchronisation.`}
           >
@@ -180,9 +180,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             />
             <span className="hidden lg:inline text-[11px]">
               {syncStatus === 'syncing' || isManualSyncing
-                ? 'Synchro...'
+                ? 'Synchro Cloud...'
                 : syncStatus === 'synced'
-                ? 'Serveur OK'
+                ? 'Cloud & Mobile OK'
                 : 'Hors ligne'}
             </span>
           </button>

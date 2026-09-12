@@ -1,4 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import {
+  getAgencyDataFromFirestore,
+  saveAgencyDataToFirestore,
+  subscribeToAgencyData,
+} from '../lib/firebase';
 import {
   User,
   Client,
@@ -429,9 +434,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : initialAuditLogs;
   });
 
-  // Server sync states
+  // Server & Firebase Firestore Cloud sync states
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('syncing');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const isApplyingRemoteRef = useRef<boolean>(false);
+  const lastSavedPayloadRef = useRef<string>('');
 
   // Helper to build full data snapshot
   const buildCurrentSnapshot = () => ({
@@ -462,150 +469,219 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     auditLogs,
   });
 
-  // Helper to merge collections without losing local or remote data
-  const mergeCollections = <T extends { id: string; updatedAt?: string; createdAt?: string }>(
-    localList: T[],
-    serverList: T[]
-  ): T[] => {
-    if (!Array.isArray(serverList)) return localList;
-    if (!Array.isArray(localList) || localList.length === 0) return serverList;
-
-    const map = new Map<string, T>();
-    serverList.forEach((item) => {
-      if (item && item.id) map.set(item.id, item);
-    });
-    localList.forEach((item) => {
-      if (!item || !item.id) return;
-      const existing = map.get(item.id);
-      if (!existing) {
-        map.set(item.id, item);
-      } else {
-        const localTime = new Date(item.updatedAt || item.createdAt || 0).getTime();
-        const serverTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
-        if (localTime >= serverTime) {
-          map.set(item.id, item);
-        }
-      }
-    });
-    return Array.from(map.values());
+  // Local storage caching helper
+  const saveSnapshotToLocalStorage = (data: any) => {
+    if (!data) return;
+    try {
+      if (data.company) localStorage.setItem(`${STORAGE_KEY}_company`, JSON.stringify(data.company));
+      if (data.users) localStorage.setItem(`${STORAGE_KEY}_users`, JSON.stringify(data.users));
+      if (data.clients) localStorage.setItem(`${STORAGE_KEY}_clients`, JSON.stringify(data.clients));
+      if (data.maintenance) localStorage.setItem(`${STORAGE_KEY}_maintenance`, JSON.stringify(data.maintenance));
+      if (data.printOrders) localStorage.setItem(`${STORAGE_KEY}_printOrders`, JSON.stringify(data.printOrders));
+      if (data.photoMinuteOrders) localStorage.setItem(`${STORAGE_KEY}_photoMinuteOrders`, JSON.stringify(data.photoMinuteOrders));
+      if (data.schoolRegistrations) localStorage.setItem(`${STORAGE_KEY}_schoolRegistrations`, JSON.stringify(data.schoolRegistrations));
+      if (data.graphicProjects) localStorage.setItem(`${STORAGE_KEY}_graphicProjects`, JSON.stringify(data.graphicProjects));
+      if (data.digitalProjects) localStorage.setItem(`${STORAGE_KEY}_digitalProjects`, JSON.stringify(data.digitalProjects));
+      if (data.tshirtOrders) localStorage.setItem(`${STORAGE_KEY}_tshirtOrders`, JSON.stringify(data.tshirtOrders));
+      if (data.quotes) localStorage.setItem(`${STORAGE_KEY}_quotes`, JSON.stringify(data.quotes));
+      if (data.invoices) localStorage.setItem(`${STORAGE_KEY}_invoices`, JSON.stringify(data.invoices));
+      if (data.payments) localStorage.setItem(`${STORAGE_KEY}_payments`, JSON.stringify(data.payments));
+      if (data.expenses) localStorage.setItem(`${STORAGE_KEY}_expenses`, JSON.stringify(data.expenses));
+      if (data.charges) localStorage.setItem(`${STORAGE_KEY}_charges`, JSON.stringify(data.charges));
+      if (data.contingencies) localStorage.setItem(`${STORAGE_KEY}_contingencies`, JSON.stringify(data.contingencies));
+      if (data.suppliers) localStorage.setItem(`${STORAGE_KEY}_suppliers`, JSON.stringify(data.suppliers));
+      if (data.products) localStorage.setItem(`${STORAGE_KEY}_products`, JSON.stringify(data.products));
+      if (data.supplySales) localStorage.setItem(`${STORAGE_KEY}_supplySales`, JSON.stringify(data.supplySales));
+      if (data.stockMovements) localStorage.setItem(`${STORAGE_KEY}_stockMovements`, JSON.stringify(data.stockMovements));
+      if (data.purchaseOrders) localStorage.setItem(`${STORAGE_KEY}_purchaseOrders`, JSON.stringify(data.purchaseOrders));
+      if (data.cashMovements) localStorage.setItem(`${STORAGE_KEY}_cashMovements`, JSON.stringify(data.cashMovements));
+      if (data.cashRegisterCloses) localStorage.setItem(`${STORAGE_KEY}_cashRegisterCloses`, JSON.stringify(data.cashRegisterCloses));
+      if (data.notifications) localStorage.setItem(`${STORAGE_KEY}_notifications`, JSON.stringify(data.notifications));
+      if (data.auditLogs) localStorage.setItem(`${STORAGE_KEY}_auditLogs`, JSON.stringify(data.auditLogs));
+    } catch (e) {
+      console.warn('Erreur cache local:', e);
+    }
   };
 
-  // Hydrate store from server data
+  // Hydrate store from cloud or server data (Authoritative source)
   const applyServerData = (d: any) => {
-    if (!d) return;
+    if (!d || typeof d !== 'object') return;
     if (d.company) setCompany(d.company);
-    if (Array.isArray(d.users)) setUsers((prev) => mergeCollections(prev, d.users));
-    if (Array.isArray(d.clients)) setClients((prev) => mergeCollections(prev, d.clients));
-    if (Array.isArray(d.maintenance)) setMaintenance((prev) => mergeCollections(prev, d.maintenance));
-    if (Array.isArray(d.printOrders)) setPrintOrders((prev) => mergeCollections(prev, d.printOrders));
-    if (Array.isArray(d.photoMinuteOrders)) setPhotoMinuteOrders((prev) => mergeCollections(prev, d.photoMinuteOrders));
-    if (Array.isArray(d.schoolRegistrations)) setSchoolRegistrations((prev) => mergeCollections(prev, d.schoolRegistrations));
-    if (Array.isArray(d.graphicProjects)) setGraphicProjects((prev) => mergeCollections(prev, d.graphicProjects));
-    if (Array.isArray(d.digitalProjects)) setDigitalProjects((prev) => mergeCollections(prev, d.digitalProjects));
-    if (Array.isArray(d.tshirtOrders)) setTshirtOrders((prev) => mergeCollections(prev, d.tshirtOrders));
-    if (Array.isArray(d.quotes)) setQuotes((prev) => mergeCollections(prev, d.quotes));
-    if (Array.isArray(d.invoices)) setInvoices((prev) => mergeCollections(prev, d.invoices));
-    if (Array.isArray(d.payments)) setPayments((prev) => mergeCollections(prev, d.payments));
-    if (Array.isArray(d.expenses)) setExpenses((prev) => mergeCollections(prev, d.expenses));
-    if (Array.isArray(d.charges)) setCharges((prev) => mergeCollections(prev, d.charges));
-    if (Array.isArray(d.contingencies)) setContingencies((prev) => mergeCollections(prev, d.contingencies));
-    if (Array.isArray(d.suppliers)) setSuppliers((prev) => mergeCollections(prev, d.suppliers));
-    if (Array.isArray(d.products)) setProducts((prev) => mergeCollections(prev, d.products));
-    if (Array.isArray(d.supplySales)) setSupplySales((prev) => mergeCollections(prev, d.supplySales));
-    if (Array.isArray(d.stockMovements)) setStockMovements((prev) => mergeCollections(prev, d.stockMovements));
-    if (Array.isArray(d.purchaseOrders)) setPurchaseOrders((prev) => mergeCollections(prev, d.purchaseOrders));
-    if (Array.isArray(d.cashMovements)) setCashMovements((prev) => mergeCollections(prev, d.cashMovements));
-    if (Array.isArray(d.cashRegisterCloses)) setCashRegisterCloses((prev) => mergeCollections(prev, d.cashRegisterCloses));
-    if (Array.isArray(d.notifications)) setNotifications((prev) => mergeCollections(prev, d.notifications));
-    if (Array.isArray(d.auditLogs)) setAuditLogs((prev) => mergeCollections(prev, d.auditLogs));
+    if (Array.isArray(d.users)) setUsers(d.users);
+    if (Array.isArray(d.clients)) setClients(d.clients);
+    if (Array.isArray(d.maintenance)) setMaintenance(d.maintenance);
+    if (Array.isArray(d.printOrders)) setPrintOrders(d.printOrders);
+    if (Array.isArray(d.photoMinuteOrders)) setPhotoMinuteOrders(d.photoMinuteOrders);
+    if (Array.isArray(d.schoolRegistrations)) setSchoolRegistrations(d.schoolRegistrations);
+    if (Array.isArray(d.graphicProjects)) setGraphicProjects(d.graphicProjects);
+    if (Array.isArray(d.digitalProjects)) setDigitalProjects(d.digitalProjects);
+    if (Array.isArray(d.tshirtOrders)) setTshirtOrders(d.tshirtOrders);
+    if (Array.isArray(d.quotes)) setQuotes(d.quotes);
+    if (Array.isArray(d.invoices)) setInvoices(d.invoices);
+    if (Array.isArray(d.payments)) setPayments(d.payments);
+    if (Array.isArray(d.expenses)) setExpenses(d.expenses);
+    if (Array.isArray(d.charges)) setCharges(d.charges);
+    if (Array.isArray(d.contingencies)) setContingencies(d.contingencies);
+    if (Array.isArray(d.suppliers)) setSuppliers(d.suppliers);
+    if (Array.isArray(d.products)) setProducts(d.products);
+    if (Array.isArray(d.supplySales)) setSupplySales(d.supplySales);
+    if (Array.isArray(d.stockMovements)) setStockMovements(d.stockMovements);
+    if (Array.isArray(d.purchaseOrders)) setPurchaseOrders(d.purchaseOrders);
+    if (Array.isArray(d.cashMovements)) setCashMovements(d.cashMovements);
+    if (Array.isArray(d.cashRegisterCloses)) setCashRegisterCloses(d.cashRegisterCloses);
+    if (Array.isArray(d.notifications)) setNotifications(d.notifications);
+    if (Array.isArray(d.auditLogs)) setAuditLogs(d.auditLogs);
+    saveSnapshotToLocalStorage(d);
   };
 
-  // Push snapshot to server
+  // Push snapshot to Firebase Firestore and local server
   const pushToServer = async (snapshotData: any) => {
     try {
-      const res = await fetch('/api/data', {
+      setSyncStatus('syncing');
+
+      // 1. Firebase Firestore Cloud Database (Universal cloud persistence accessible on phone & desktop)
+      const cloudSuccess = await saveAgencyDataToFirestore(
+        snapshotData,
+        currentUser?.name || 'SYGEMA'
+      );
+
+      // 2. Also keep local Express server backup
+      fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: snapshotData }),
-      });
-      if (res.ok) {
+      }).catch((e) => console.warn('Sauvegarde locale serveur warning:', e));
+
+      if (cloudSuccess) {
         setSyncStatus('synced');
         setLastSyncTime(new Date().toLocaleTimeString('fr-FR'));
       } else {
         setSyncStatus('error');
       }
     } catch (e) {
-      console.warn('Erreur de synchronisation serveur:', e);
+      console.warn('Erreur de synchronisation cloud:', e);
       setSyncStatus('offline');
     }
   };
 
-  // Manual or automatic pull from server
+  // Manual or automatic pull from cloud Firestore
   const forceSyncWithServer = async () => {
     setSyncStatus('syncing');
     try {
-      const res = await fetch('/api/data');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          applyServerData(json.data);
-          setSyncStatus('synced');
-          setLastSyncTime(new Date().toLocaleTimeString('fr-FR'));
-        } else {
-          // If server empty, initialize it with current state
-          await pushToServer(buildCurrentSnapshot());
-        }
+      const cloudData = await getAgencyDataFromFirestore();
+      if (cloudData && typeof cloudData === 'object' && Object.keys(cloudData).length > 0) {
+        isApplyingRemoteRef.current = true;
+        applyServerData(cloudData);
+        lastSavedPayloadRef.current = JSON.stringify(cloudData);
+        setTimeout(() => {
+          isApplyingRemoteRef.current = false;
+        }, 500);
+        setSyncStatus('synced');
+        setLastSyncTime(new Date().toLocaleTimeString('fr-FR'));
       } else {
-        setSyncStatus('error');
+        // If cloud empty, upload current snapshot to Firestore
+        const currentSnap = buildCurrentSnapshot();
+        await pushToServer(currentSnap);
+        lastSavedPayloadRef.current = JSON.stringify(currentSnap);
+        setSyncStatus('synced');
+        setLastSyncTime(new Date().toLocaleTimeString('fr-FR'));
       }
     } catch (e) {
+      console.warn('Erreur forceSyncWithServer:', e);
       setSyncStatus('offline');
     }
   };
 
-  // Initial Load & Server Connection
+  // Initial Load & Real-time Cloud Connection
   useEffect(() => {
+    let isMounted = true;
+
     const initData = async () => {
       try {
         setSyncStatus('syncing');
-        const res = await fetch('/api/data');
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.data) {
-            applyServerData(json.data);
+
+        // 1. Check Firebase Firestore (Persistent Cloud Database)
+        let cloudData: any = null;
+        try {
+          cloudData = await getAgencyDataFromFirestore();
+        } catch (fbErr) {
+          console.warn('Connexion initiale Firestore:', fbErr);
+        }
+
+        if (cloudData && typeof cloudData === 'object' && Object.keys(cloudData).length > 0) {
+          if (isMounted) {
+            isApplyingRemoteRef.current = true;
+            applyServerData(cloudData);
+            lastSavedPayloadRef.current = JSON.stringify(cloudData);
+            setTimeout(() => {
+              isApplyingRemoteRef.current = false;
+            }, 500);
             setSyncStatus('synced');
             setLastSyncTime(new Date().toLocaleTimeString('fr-FR'));
-          } else {
-            // First time running, push local data to server
-            await pushToServer(buildCurrentSnapshot());
           }
         } else {
-          setSyncStatus('offline');
+          // 2. Cloud is empty: recover data from server disk or current state
+          let serverData = null;
+          try {
+            const res = await fetch('/api/data');
+            if (res.ok) {
+              const json = await res.json();
+              if (json.success && json.data) {
+                serverData = json.data;
+              }
+            }
+          } catch (e) {
+            console.warn('Erreur lecture données serveur:', e);
+          }
+
+          const snapshotToSeed = serverData || buildCurrentSnapshot();
+          if (serverData && isMounted) {
+            isApplyingRemoteRef.current = true;
+            applyServerData(serverData);
+            setTimeout(() => {
+              isApplyingRemoteRef.current = false;
+            }, 500);
+          }
+
+          // Push to Firebase Firestore so it's permanently stored in the cloud and accessible from phone
+          await saveAgencyDataToFirestore(snapshotToSeed, currentUser?.name || 'SYGEMA');
+          lastSavedPayloadRef.current = JSON.stringify(snapshotToSeed);
+          if (isMounted) {
+            setSyncStatus('synced');
+            setLastSyncTime(new Date().toLocaleTimeString('fr-FR'));
+          }
         }
       } catch (err) {
-        setSyncStatus('offline');
+        console.warn('Erreur initialisation données:', err);
+        if (isMounted) setSyncStatus('offline');
       } finally {
-        setLoaded(true);
+        if (isMounted) setLoaded(true);
       }
     };
 
     initData();
 
-    // Background polling every 4 seconds to sync any edits from other users (e.g. Gérant)
-    const pollInterval = setInterval(() => {
-      fetch('/api/data')
-        .then((r) => (r.ok ? r.json() : null))
-        .then((json) => {
-          if (json && json.success && json.data) {
-            applyServerData(json.data);
-            setSyncStatus('synced');
-            setLastSyncTime(new Date().toLocaleTimeString('fr-FR'));
-          }
-        })
-        .catch(() => {
-          setSyncStatus('offline');
-        });
-    }, 4000);
+    // 3. Real-time subscription to Firebase Firestore
+    // When ANY user updates data from phone, tablet, or PC, it syncs live across all devices!
+    const unsubscribeFirestore = subscribeToAgencyData(
+      (remoteData) => {
+        if (!remoteData || typeof remoteData !== 'object') return;
+        const remoteStr = JSON.stringify(remoteData);
+        if (remoteStr === lastSavedPayloadRef.current) return;
+
+        isApplyingRemoteRef.current = true;
+        applyServerData(remoteData);
+        lastSavedPayloadRef.current = remoteStr;
+        setSyncStatus('synced');
+        setLastSyncTime(new Date().toLocaleTimeString('fr-FR'));
+        setTimeout(() => {
+          isApplyingRemoteRef.current = false;
+        }, 500);
+      },
+      (error) => {
+        console.warn('Abonnement Firestore:', error);
+      }
+    );
 
     // Also sync on window focus
     const onFocus = () => {
@@ -614,50 +690,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     window.addEventListener('focus', onFocus);
 
     return () => {
-      clearInterval(pollInterval);
+      isMounted = false;
+      unsubscribeFirestore();
       window.removeEventListener('focus', onFocus);
     };
   }, []);
 
-  // Save to localStorage & sync to server on state updates
+  // Save to localStorage & sync to Cloud on state updates
   useEffect(() => {
     if (!loaded) return;
-    try {
-      localStorage.setItem(`${STORAGE_KEY}_company`, JSON.stringify(company));
-      localStorage.setItem(`${STORAGE_KEY}_users`, JSON.stringify(users));
-      localStorage.setItem(`${STORAGE_KEY}_clients`, JSON.stringify(clients));
-      localStorage.setItem(`${STORAGE_KEY}_maintenance`, JSON.stringify(maintenance));
-      localStorage.setItem(`${STORAGE_KEY}_printOrders`, JSON.stringify(printOrders));
-      localStorage.setItem(`${STORAGE_KEY}_photoMinuteOrders`, JSON.stringify(photoMinuteOrders));
-      localStorage.setItem(`${STORAGE_KEY}_schoolRegistrations`, JSON.stringify(schoolRegistrations));
-      localStorage.setItem(`${STORAGE_KEY}_graphicProjects`, JSON.stringify(graphicProjects));
-      localStorage.setItem(`${STORAGE_KEY}_digitalProjects`, JSON.stringify(digitalProjects));
-      localStorage.setItem(`${STORAGE_KEY}_tshirtOrders`, JSON.stringify(tshirtOrders));
-      localStorage.setItem(`${STORAGE_KEY}_quotes`, JSON.stringify(quotes));
-      localStorage.setItem(`${STORAGE_KEY}_invoices`, JSON.stringify(invoices));
-      localStorage.setItem(`${STORAGE_KEY}_payments`, JSON.stringify(payments));
-      localStorage.setItem(`${STORAGE_KEY}_expenses`, JSON.stringify(expenses));
-      localStorage.setItem(`${STORAGE_KEY}_charges`, JSON.stringify(charges));
-      localStorage.setItem(`${STORAGE_KEY}_contingencies`, JSON.stringify(contingencies));
-      localStorage.setItem(`${STORAGE_KEY}_suppliers`, JSON.stringify(suppliers));
-      localStorage.setItem(`${STORAGE_KEY}_products`, JSON.stringify(products));
-      localStorage.setItem(`${STORAGE_KEY}_stockMovements`, JSON.stringify(stockMovements));
-      localStorage.setItem(`${STORAGE_KEY}_purchaseOrders`, JSON.stringify(purchaseOrders));
-      localStorage.setItem(`${STORAGE_KEY}_cashMovements`, JSON.stringify(cashMovements));
-      localStorage.setItem(`${STORAGE_KEY}_cashRegisterCloses`, JSON.stringify(cashRegisterCloses));
-      localStorage.setItem(`${STORAGE_KEY}_notifications`, JSON.stringify(notifications));
-      localStorage.setItem(`${STORAGE_KEY}_auditLogs`, JSON.stringify(auditLogs));
-      localStorage.setItem(`${STORAGE_KEY}_supplySales`, JSON.stringify(supplySales));
+    if (isApplyingRemoteRef.current) return;
 
-      // Push to server (debounced)
-      const timer = setTimeout(() => {
-        pushToServer(buildCurrentSnapshot());
-      }, 500);
+    const currentSnapshot = buildCurrentSnapshot();
+    const currentHash = JSON.stringify(currentSnapshot);
+    if (currentHash === lastSavedPayloadRef.current) return;
 
-      return () => clearTimeout(timer);
-    } catch (e) {
-      console.warn('Erreur de sauvegarde locale', e);
-    }
+    saveSnapshotToLocalStorage(currentSnapshot);
+
+    const timer = setTimeout(async () => {
+      lastSavedPayloadRef.current = currentHash;
+      await pushToServer(currentSnapshot);
+    }, 600);
+
+    return () => clearTimeout(timer);
   }, [
     loaded,
     company,

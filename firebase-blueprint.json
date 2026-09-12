@@ -1,0 +1,25 @@
+{
+  "entities": {
+    "AgencyData": {
+      "title": "AgencyData",
+      "description": "Données complètes ou sectorielles de l'agence SYGEMA CI",
+      "type": "object",
+      "properties": {
+        "updatedAt": {
+          "type": "string",
+          "description": "Horodatage de la dernière modification"
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "Identifiant ou nom de l'utilisateur ayant mis à jour les données"
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/agency_data/{documentId}": {
+      "schema": "AgencyData",
+      "description": "Documents de stockage persistant pour l'agence SYGEMA CI (snapshot, clients, commandes, stocks, caisse, factures)"
+    }
+  }
+}
