@@ -30,6 +30,7 @@ import {
   Camera,
   GraduationCap,
 } from 'lucide-react';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface SidebarProps {
   currentView: string;
@@ -219,6 +220,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 })}
             </div>
           ))}
+        </div>
+
+        {/* PWA Install Button */}
+        <div className="px-3 pb-2">
+          <PWAInstallButton variant="sidebar" />
         </div>
 
         {/* Bottom User Info & Logout */}

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <radialGradient id="sygemaGrad" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="#19336d" />
+      <stop offset="100%" stop-color="#0f2048" />
+    </radialGradient>
+    <filter id="subtleShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Circle with Dark Navy Gradient -->
+  <circle cx="250" cy="250" r="240" fill="url(#sygemaGrad)" />
+
+  <!-- Outer Double Ring -->
+  <circle cx="250" cy="250" r="226" fill="none" stroke="#ffffff" stroke-width="4.5" opacity="0.95" />
+  <circle cx="250" cy="250" r="236" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.5" />
+
+  <!-- Central Infinity/Ribbon Symbol matching the provided image -->
+  <g fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" transform="translate(0, -25)">
+    <!-- Smooth double-loop ribbon with calligraphic flow -->
+    <path d="M 250 145 C 290 145 305 180 285 215 C 265 250 215 280 215 320 C 215 355 240 375 265 375 C 290 375 305 350 295 325 C 285 300 245 260 225 225 C 205 190 210 145 250 145 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Inner dynamic leaf/flourish curve -->
+    <path d="M 245 180 C 255 220 235 250 268 295" stroke="#ffffff" stroke-width="10" stroke-linecap="round"/>
+  </g>
+
+  <!-- Brand Typography: SYGEMA CI -->
+  <text x="250" y="375" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Segoe UI', Montserrat, Arial, sans-serif" font-size="46" font-weight="800" fill="#ffffff" letter-spacing="4">SYGEMA CI</text>
+
+  <!-- Accent Subtitle Dot or subtle ring -->
+  <circle cx="250" cy="402" r="3" fill="#eab308" />
+</svg>

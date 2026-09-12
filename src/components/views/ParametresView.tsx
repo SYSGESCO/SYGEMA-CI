@@ -12,6 +12,7 @@ import {
   Palette,
   Lock,
 } from 'lucide-react';
+import { PWAInstallButton } from '../PWAInstallButton';
 
 export const ParametresView: React.FC = () => {
   const { companyInfo, updateCompanyInfo, resetAllData, currentUser } = useAppStore();
@@ -234,6 +235,9 @@ export const ParametresView: React.FC = () => {
               <span>Conforme au cahier des charges SYGEMA CI</span>
             </div>
           </div>
+
+          {/* PWA Mobile & Desktop Installation Card */}
+          <PWAInstallButton variant="card" />
 
           {/* Reset All Data to Zero Section */}
           <div className="bg-rose-50 rounded-2xl p-5 border border-rose-200 text-xs space-y-3">

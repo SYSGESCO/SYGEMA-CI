@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { LiveClock } from './LiveClock';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface NavbarProps {
   onOpenMobileMenu?: () => void;
@@ -155,6 +156,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Compact Clock for Mobile */}
           <LiveClock variant="compact" className="flex md:hidden" />
+
+          {/* PWA Install Button (Desktop and Mobile) */}
+          <PWAInstallButton variant="navbar" className="hidden sm:flex" />
+          <PWAInstallButton variant="compact" className="sm:hidden" />
 
           {/* Server Sync Indicator & Manual Sync Button */}
           <button

@@ -8,6 +8,7 @@ import {
   PrintableDocumentModal,
   PrintableDocType,
 } from './components/PrintableDocumentModal';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import { Lock, AlertCircle } from 'lucide-react';
 
 // Views
@@ -198,6 +199,9 @@ const MainLayout: React.FC = () => {
           onClose={() => setPrintDoc(null)}
         />
       )}
+
+      {/* Offline connectivity indicator */}
+      <OfflineIndicator />
     </div>
   );
 };

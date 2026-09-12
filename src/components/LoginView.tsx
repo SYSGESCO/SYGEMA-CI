@@ -13,6 +13,7 @@ import {
   Phone,
   MapPin,
 } from 'lucide-react';
+import { PWAInstallButton } from './PWAInstallButton';
 
 export const LoginView: React.FC = () => {
   const { login, company } = useAppStore();
@@ -56,14 +57,17 @@ export const LoginView: React.FC = () => {
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-4 text-xs text-slate-400">
-          <div className="flex items-center gap-1.5">
-            <Phone className="w-3.5 h-3.5 text-amber-400" />
-            <span>{company.phone || '05 66 59 45 49'}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-amber-400" />
-            <span>Quartier Soleil 2</span>
+        <div className="flex items-center gap-3">
+          <PWAInstallButton variant="navbar" />
+          <div className="hidden sm:flex items-center gap-4 text-xs text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <Phone className="w-3.5 h-3.5 text-amber-400" />
+              <span>{company.phone || '05 66 59 45 49'}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-amber-400" />
+              <span>Quartier Soleil 2</span>
+            </div>
           </div>
         </div>
       </header>
